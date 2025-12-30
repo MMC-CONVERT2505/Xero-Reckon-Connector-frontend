@@ -30,7 +30,7 @@ function ReckonFileSelection() {
     setError(null);
 
     // Fix: use port 5001 (same as Xero)
-    fetch(`http://localhost:5000/get-reckon-files?job_id=${storedJobId}`)
+    fetch(`https://data-sync.mmcconvert.com//get-reckon-files?job_id=${storedJobId}`)
       .then((res) => {
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}: ${res.statusText}`);
@@ -66,7 +66,7 @@ function ReckonFileSelection() {
 
     try {
       // Fix: use port 5001 and send book_id/book_name (or adjust if your backend expects different field names)
-      const res = await fetch("http://localhost:5000/stored_reckon_organization", {
+      const res = await fetch("https://data-sync.mmcconvert.com//stored_reckon_organization", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

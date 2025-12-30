@@ -32,7 +32,7 @@ function XeroFileSelection() {
       setLoading(true);
       setError(null);
   
-      fetch(`https://xero-reckon-sync.mmcconvert.com/get-xero-files?job_id=${storedJobId}`)
+      fetch(`https://data-sync.mmcconvert.com//get-xero-files?job_id=${storedJobId}`)
         .then((res) => res.json())
         .then((data) => {
           const list: XeroFile[] = data.files || [];
@@ -62,7 +62,7 @@ function XeroFileSelection() {
         setError(null);
       
         try {
-          const res = await fetch("https://xero-reckon-sync.mmcconvert.com/stored_xero_organization", {
+          const res = await fetch("https://data-sync.mmcconvert.com//stored_xero_organization", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
