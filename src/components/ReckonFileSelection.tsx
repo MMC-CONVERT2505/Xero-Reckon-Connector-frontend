@@ -31,13 +31,9 @@ function ReckonFileSelection() {
 
     // Fix: use port 5001 (same as Xero)
     fetch(`https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`)
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        }
-        return res.json();
-      })
+      .then((res) => res.json())
       .then((data) => {
+        console.log("Fetched Reckon files:", data);
         const list: ReckonFile[] = data.files || [];
         setFiles(list);
         if (list.length > 0) {
