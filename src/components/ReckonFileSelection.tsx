@@ -19,6 +19,8 @@ function ReckonFileSelection() {
   useEffect(() => {
     const storedJobId = localStorage.getItem("jobId");
 
+    console.log("Stored Job ID:", storedJobId);
+
     if (!storedJobId) {
       setError("Job ID not found. Please complete the customer info step first.");
       setLoading(false);
@@ -29,8 +31,10 @@ function ReckonFileSelection() {
     setLoading(true);
     setError(null);
 
+
+
     // Fix: use port 5001 (same as Xero)
-    fetch(`https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`)
+    fetch(`https://data-sync.mmcconvert.com//get-reckon-files?job_id=${storedJobId}`)
 
 
       .then((res) => {
