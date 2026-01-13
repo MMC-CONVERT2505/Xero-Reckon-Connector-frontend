@@ -33,19 +33,31 @@ function ReckonFileSelection() {
 
 
 
-    // Fix: use port 5001 (same as Xero)
-    fetch(`https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`)
-
-
-      .then((res) => res.json())
-
-      .then((data) => {
-
+    // Fetch Reckon files from backend
+    fetch(`https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    })
+      .then(async (res) => {
+        console.log("Response status:", res.status);
+        console.log("Response headers:", Object.fromEntries(res.headers.entries()));
+        
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("Response error:", errorText);
+          throw new Error(`HTTP ${res.status}: ${errorText || res.statusText}`);
+        }
+        
+        const data = await res.json();
         console.log("Fetched Reckon files:", data);
+        
         // Check if the response contains an error field (like your Flask API might return)
         if (data.error) {
           throw new Error(data.error);
         }
+        
         const list: ReckonFile[] = data.files || [];
         setFiles(list);
         if (list.length > 0) {
@@ -54,8 +66,17 @@ function ReckonFileSelection() {
         setLoading(false);
       })
       .catch((err) => {
-        console.error("Error loading Reckon files:", err);
-        setError(`Failed to load Reckon organizations: ${err.message}`);
+        console.error("Error loading Reckon files - full error:", err);
+        console.error("Error name:", err.name);
+        console.error("Error message:", err.message);
+        console.error("Error stack:", err.stack);
+        
+        // Check if it's a CORS error
+        if (err.message === "Failed to fetch" || err.name === "TypeError") {
+          setError(`CORS Error: Failed to fetch Reckon files. Please check that the backend allows requests from this origin. Error: ${err.message}`);
+        } else {
+          setError(`Failed to load Reckon organizations: ${err.message}`);
+        }
         setLoading(false);
       });
   }, []);
