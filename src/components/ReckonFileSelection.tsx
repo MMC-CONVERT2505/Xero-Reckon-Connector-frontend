@@ -34,22 +34,14 @@ function ReckonFileSelection() {
 
 
     // Fix: use port 5001 (same as Xero)
-    fetch(`https://data-sync.mmcconvert.com//get-reckon-files?job_id=${storedJobId}`)
+    fetch(`https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`)
 
 
-      .then((res) => {
-        if (!res.ok) {
-          // Try to parse error response as JSON first
-          return res.json().then((errorData) => {
-            throw new Error(errorData?.error || `HTTP ${res.status}: ${res.statusText}`);
-          }).catch(() => {
-            // If JSON parsing fails, throw with status
-            throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-          });
-        }
-        return res.json();
-      })
+      .then((res) => res.json())
+
       .then((data) => {
+
+        console.log("Fetched Reckon files:", data);
         // Check if the response contains an error field (like your Flask API might return)
         if (data.error) {
           throw new Error(data.error);
