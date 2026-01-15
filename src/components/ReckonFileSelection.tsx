@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle } from "lucide-react";
 
+import axios from "axios";
+
 interface ReckonFile {
   book_id: string;  // Changed from tenant_id
   book_name: string; // Changed from tenant_name
@@ -16,62 +18,118 @@ function ReckonFileSelection() {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const storedJobId = localStorage.getItem("jobId");
+  // useEffect(() => {
+  //   const storedJobId = localStorage.getItem("jobId");
 
-    console.log("Stored Job ID:", storedJobId);
+  //   console.log("Stored Job ID:", storedJobId);
 
-    if (!storedJobId) {
-      setError("Job ID not found. Please complete the customer info step first.");
+  //   if (!storedJobId) {
+  //     setError("Job ID not found. Please complete the customer info step first.");
+  //     setLoading(false);
+  //     return;
+  //   }
+
+  //   setJobId(storedJobId);
+  //   setLoading(true);
+  //   setError(null);
+
+
+  //   // Fetch Reckon files from backend
+  //   fetch(`https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`)
+
+  //     .then(async (res) => {
+
+  //       console.log("Status:", res.status);
+  //       console.log("OK:", res.ok);
+  //       console.log("Content-Type:", res.headers.get("content-type"));
+
+
+  //       const rawText = await res.text();
+  //       console.log("Raw response:", rawText);
+
+
+  //       if (!res.ok) {
+  //         throw new Error(`HTTP ${res.status}`);
+  //       }
+
+  //       try {
+  //         return JSON.parse(rawText);
+  //       } catch (e) {
+  //         console.error("JSON parse failed");
+  //         throw new Error("Invalid JSON response");
+  //       }
+  //     })
+  //     .then((data) => {
+  //         console.log("Fetched Reckon files:", data);
+  //         const list: ReckonFile[] = data.files || [];
+  //         setFiles(list);
+  //         if (list.length > 0) {
+  //           setSelectedBookId(list[0].book_id);
+  //         }
+  //         setLoading(false);
+  //       })
+  //       .catch((err) => {
+  //         console.error(err);
+  //         setError("Failed to load Reckon organizations");
+  //         setLoading(false);
+  //       });
+  //   }, []);
+
+
+
+
+useEffect(() => {
+  const storedJobId = localStorage.getItem("jobId");
+
+  console.log("Stored Job ID:", storedJobId);
+
+  if (!storedJobId) {
+    setError("Job ID not found. Please complete the customer info step first.");
+    setLoading(false);
+    return;
+  }
+
+  setJobId(storedJobId);
+  setLoading(true);
+  setError(null);
+
+  axios
+    .get(`https://data-sync.mmcconvert.com/get-reckon-files`, {
+      params: { job_id: storedJobId },
+      responseType: "text", // 👈 important to log raw response like fetch
+    })
+    .then((res) => {
+      console.log("Status:", res.status);
+      console.log("OK:", res.status >= 200 && res.status < 300);
+      console.log("Content-Type:", res.headers["content-type"]);
+      console.log("Raw response:", res.data);
+
+      try {
+        return JSON.parse(res.data);
+      } catch (e) {
+        console.error("JSON parse failed");
+        throw new Error("Invalid JSON response");
+      }
+    })
+    .then((data) => {
+      console.log("Fetched Reckon files:", data);
+
+      const list: ReckonFile[] = data.files || [];
+      setFiles(list);
+
+      if (list.length > 0) {
+        setSelectedBookId(list[0].book_id);
+      }
+
       setLoading(false);
-      return;
-    }
+    })
+    .catch((err) => {
+      console.error("Axios error:", err);
+      setError("Failed to load Reckon organizations");
+      setLoading(false);
+    });
+}, []);
 
-    setJobId(storedJobId);
-    setLoading(true);
-    setError(null);
-
-
-    // Fetch Reckon files from backend
-    fetch(`https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`)
-
-      .then(async (res) => {
-
-        console.log("Status:", res.status);
-        console.log("OK:", res.ok);
-        console.log("Content-Type:", res.headers.get("content-type"));
-
-
-        const rawText = await res.text();
-        console.log("Raw response:", rawText);
-
-
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`);
-        }
-
-        try {
-          return JSON.parse(rawText);
-        } catch (e) {
-          console.error("JSON parse failed");
-          throw new Error("Invalid JSON response");
-        }
-      })
-      .then((data) => {
-          console.log("Fetched Reckon files:", data);
-          const list: ReckonFile[] = data.files || [];
-          setFiles(list);
-          if (list.length > 0) {
-            setSelectedBookId(list[0].book_id);
-          }
-          setLoading(false);
-        })
-        .catch((err) => {
-          console.error(err);
-          setError("Failed to load Reckon organizations");
-          setLoading(false);
-        });
-    }, []);
   
   const handleConnect = async () => {
     if (!selectedBookId || !jobId) return; // Changed from selectedTenantId
