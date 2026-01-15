@@ -32,26 +32,24 @@ function ReckonFileSelection() {
     setError(null);
 
 
-
     // Fetch Reckon files from backend
     fetch(`https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`)
 
       .then(async (res) => {
-        // 1️⃣ Check HTTP response
+
         console.log("Status:", res.status);
         console.log("OK:", res.ok);
         console.log("Content-Type:", res.headers.get("content-type"));
 
-        // 2️⃣ Read raw response text FIRST
+
         const rawText = await res.text();
         console.log("Raw response:", rawText);
 
-        // 3️⃣ If status is not OK, stop here
+
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);
         }
 
-        // 4️⃣ Try parsing JSON manually
         try {
           return JSON.parse(rawText);
         } catch (e) {
@@ -60,7 +58,7 @@ function ReckonFileSelection() {
         }
       })
       .then((data) => {
-          console.log("Fetched Xero files:", data);
+          console.log("Fetched Reckon files:", data);
           const list: ReckonFile[] = data.files || [];
           setFiles(list);
           if (list.length > 0) {
@@ -70,7 +68,7 @@ function ReckonFileSelection() {
         })
         .catch((err) => {
           console.error(err);
-          setError("Failed to load Xero organizations");
+          setError("Failed to load Reckon organizations");
           setLoading(false);
         });
     }, []);
