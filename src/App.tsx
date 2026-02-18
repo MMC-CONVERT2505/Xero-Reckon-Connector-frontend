@@ -69,7 +69,7 @@ const App = () => (
           <Route path="/wizard" element={<MigrationWizard />} />
 
           {/* Individual screens as pages */}
-          <Route path="/customer-info" element={<CustomerInfoPage />} />
+          <Route path="/customer-info-naqood" element={<CustomerInfoPage />} />
           <Route path="/connect-accounts" element={<ConnectionStepPage />} />
           <Route path="/xero-file-selection/:jobId" element={<XeroFileSelection />} />
           <Route path="/Reckon-file-selection/:jobId" element={< ReckonFileSelection/>} />
