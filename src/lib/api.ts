@@ -248,7 +248,7 @@ export const api = {
   },
 
   createCustomerInfo: async (customerInfo: CustomerInfo): Promise<ApiResponse<CustomerInfoResponse>> => {
-    return apiClient.post<CustomerInfoResponse>('/api/customer-info-naqood', {
+    return apiClient.post<CustomerInfoResponse>('/api/customer-info', {
       company_name: customerInfo.companyName,
       contact_name: customerInfo.contactName,
       email: customerInfo.email,

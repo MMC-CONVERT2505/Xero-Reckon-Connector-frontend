@@ -34,7 +34,10 @@ function XeroFileSelection() {
   
       fetch(`https://data-sync.mmcconvert.com//get-xero-files?job_id=${storedJobId}`)
         .then((res) => res.json())
+
+
         .then((data) => {
+          console.log("Fetched Xero files:", data);
           const list: XeroFile[] = data.files || [];
           setFiles(list);
           if (list.length > 0) {

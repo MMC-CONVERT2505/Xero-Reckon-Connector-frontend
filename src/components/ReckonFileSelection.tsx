@@ -35,7 +35,7 @@ function ReckonFileSelection() {
 
 
   //   // Fetch Reckon files from backend
-  //   fetch(`https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`)
+  //   fetch(`http://localhost:5000/get-reckon-files?job_id=${storedJobId}`)
 
   //     .then(async (res) => {
 

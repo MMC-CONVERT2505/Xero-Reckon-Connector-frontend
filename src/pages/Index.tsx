@@ -1,10 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Shield, Zap, Database } from "lucide-react";
+import { MoveRight, ArrowRight, Shield, Zap, Database } from "lucide-react";
 import XeroLogo from "@/components/XeroLogo";
 import ReckonLogo from "@/components/ReckonLogo";
+import MmcLogo  from "@/components/MmcLogo";
 import MigrationWizard from "@/components/MigrationWizard";
 import { useNavigate } from "react-router-dom";
+
+
+
 
 const Index = () => {
   const navigate = useNavigate();
@@ -12,7 +16,28 @@ const Index = () => {
 
 
   return (
-    <div className="min-h-screen bg-background">
+
+
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100">
+
+
+     <div className="max-w-7xl mx-auto px-6 py-6 flex justify-between items-center">
+  
+      {/* Logo + Name */}
+      <div className="flex items-center gap-3">
+
+      <MmcLogo className="h-12 w-auto transition-transform group-hover:scale-110 drop-shadow-lg" />
+      
+      </div>
+
+
+
+        <div className="hidden md:flex gap-10 text-sm text-gray-600">
+          <a href="#" className="hover:text-orange-500 transition">Tutorial</a>
+          <a href="#" className="hover:text-orange-500 transition">Help Guide</a>
+          <a href="#" className="hover:text-orange-500 transition">FAQs</a>
+        </div>
+      </div>
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         {/* Background Elements */}
@@ -30,9 +55,9 @@ const Index = () => {
             
             <div className="flex flex-col items-center">
               <div className="flex items-center gap-2">
-                <div className="w-4 md:w-8 h-0.5 bg-muted-foreground/30" />
-                <ArrowRight className="w-6 h-6 md:w-8 md:h-8 text-primary animate-pulse-soft" />
-                <div className="w-4 md:w-8 h-0.5 bg-muted-foreground/30" />
+                <div className="w-4 md:w-8 h-0.5 bg-primary" />
+                <MoveRight className="w-6 h-6 md:w-8 md:h-8 text-primary" strokeWidth={1.5} />
+                
               </div>
               <span className="text-xs text-muted-foreground mt-1">migrate</span>
             </div>
@@ -45,10 +70,17 @@ const Index = () => {
 
           {/* Main Content */}
           <div className="text-center max-w-3xl mx-auto animate-fade-in" style={{ animationDelay: "0.2s" }}>
-            <h1 className="text-4xl md:text-6xl font-bold text-foreground mb-6 leading-tight">
-              Seamless Data Migration
-              <span className="block text-gradient-brand">Xero to Reckon</span>
-            </h1>
+            <h5 className="text-3xl md:text-5xl font-bold text-foreground mb-6 leading-tight">
+              Seamless Data Migration</h5>
+
+               <h1 className="text-6xl md:text-7xl font-extrabold flex flex-wrap justify-center items-center gap-6 mb-10">
+                <span className="text-[#13B5EA]">Xero</span>
+                <span className="text-gray-700 font-medium">to</span>
+                <span className="text-red-600">Reckon One</span>
+              </h1>
+
+
+
             <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
               Transfer your accounting data securely and efficiently. 
               Our automated migration tool ensures zero data loss and minimal downtime.

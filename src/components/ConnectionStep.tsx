@@ -129,7 +129,7 @@ useEffect(() => {
     setConnecting(service);
   
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://data-sync.mmcconvert.com/";
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/";
   
       if (service === "xero") {
         // Get jobId from localStorage (saved earlier in CustomerInfoForm)
