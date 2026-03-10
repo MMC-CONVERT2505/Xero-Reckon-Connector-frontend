@@ -41,6 +41,8 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
       const jobId = Number(storedJobId);
       // Fire the backend call - redirect is handled in api.startMigration
       const response = await api.startMigration(jobId);
+
+      navigate(`/migration-progress/${jobId}`);
       
       // Only show toast if redirect_url is not present (fallback)
       if (!response.data?.redirect_url) {

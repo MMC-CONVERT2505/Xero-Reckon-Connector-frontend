@@ -73,7 +73,7 @@ const App = () => (
           <Route path="/connect-accounts" element={<ConnectionStepPage />} />
           <Route path="/xero-file-selection/:jobId" element={<XeroFileSelection />} />
           <Route path="/Reckon-file-selection/:jobId" element={< ReckonFileSelection/>} />
-          <Route path="/migration-progress" element={<MigrationProgressPage />} />
+          <Route path="/migration-progress/:jobId" element={<MigrationProgressPage />} />
 
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/migrations/:jobId" element={<AdminMigrationDetails />} />
