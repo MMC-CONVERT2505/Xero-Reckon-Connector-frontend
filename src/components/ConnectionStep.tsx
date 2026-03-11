@@ -23,11 +23,11 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const [xeroToolId, setXeroToolId] = useState<number | null>(null);
   const [reckonToolId, setReckonToolId] = useState<number | null>(null);
 
-  const   handleStartMigration = async () => {
+  const handleStartMigration = async () => {
+  console.log("handleStartMigration fired");
 
   const storedJobId = localStorage.getItem("jobId");
-
-  console.log (storedJobId,"storedJobId")
+  console.log("storedJobId", storedJobId);
 
   if (!storedJobId) {
     toast({
@@ -39,20 +39,12 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   }
 
   const jobId = Number(storedJobId);
+  console.log("navigating to", `/migration-progress/${jobId}`);
 
-  console.log(jobId,"jobId")
-
-  // // ✅ Redirect immediately
-  // navigate(`/migration-progress/${jobId}`);
-
-  // redirect immediately
   navigate(`/migration-progress/${jobId}`);
 
-
   setStartingMigration(true);
-
   try {
-    // Run API in background
     await api.startMigration(jobId);
   } catch (error) {
     console.error("Error starting migration:", error);
@@ -311,7 +303,7 @@ useEffect(() => {
 
       {bothConnected && (
         <div className="animate-scale-in">
-          <Button 
+          {/* <Button 
             onClick={handleStartMigration} 
             size="lg" 
             className="w-full"
@@ -325,7 +317,34 @@ useEffect(() => {
             ) : (
               "Start Migration"
             )}
+          </Button> */}
+
+
+          // ... existing code ...
+
+          <Button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              console.log("Start Migration clicked");
+              handleStartMigration();
+            }}
+            size="lg"
+            className="w-full"
+            disabled={startingMigration}
+          >
+            {startingMigration ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Starting Migration...
+              </>
+            ) : (
+              "Start Migration"
+            )}
           </Button>
+
+
         </div>
       )}
     </div>
