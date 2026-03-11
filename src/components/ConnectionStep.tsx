@@ -25,10 +25,10 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
 
   // ... existing code ...
 
+// ... existing code ...
+
 const handleStartMigration = async () => {
   const storedJobId = localStorage.getItem("jobId");
-
-  console.log(storedJobId,"storedJobId")
 
   if (!storedJobId) {
     toast({
@@ -39,20 +39,21 @@ const handleStartMigration = async () => {
     return;
   }
 
-
   const jobId = Number(storedJobId);
 
-  console.log(jobId,"jobId")
-
-  // immediately go to the route you want
-  navigate(`/migration-process/${jobId}`);
-
   setStartingMigration(true);
-
   try {
+    const res = await api.startMigration(jobId);
 
-    await api.startMigration(jobId);
+    if (res?.error) {
+      throw new Error(res.error.message || "Failed to start migration");
+    }
 
+    // If you're in /wizard, advance the wizard
+    onComplete();
+
+    // If you're in page flow, go to the progress route
+    navigate(`/migration-progress/${jobId}`, { replace: true });
   } catch (error) {
     console.error("Error starting migration:", error);
     toast({
@@ -60,12 +61,10 @@ const handleStartMigration = async () => {
       description: "Failed to start migration. Please try again.",
       variant: "destructive",
     });
+  } finally {
     setStartingMigration(false);
   }
 };
-
-// ... existing code ...
-  // ... rest of your component code stays the same ...
   
   // Check if we're returning from OAuth callback
   // Check if we're returning from OAuth callback OR from file selection
@@ -192,6 +191,9 @@ useEffect(() => {
   }, [xeroToolId, reckonToolId, onToolIdsSet]);
 
   const bothConnected = xeroConnected && reckonConnected;
+
+
+  console.log(bothConnected,"bothConnected")
 
   return (
     <div className="space-y-8 animate-fade-in">
