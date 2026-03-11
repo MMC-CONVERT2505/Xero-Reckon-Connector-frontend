@@ -44,10 +44,14 @@ const handleStartMigration = async () => {
     return;
   }
 
+  const jobId = Number(storedJobId);
+
   setStartingMigration(true);
 
+  navigate(`/migration-progress/${jobId}`);
+
   try {
-    const jobId = Number(storedJobId);
+
     console.log("Calling API with Job ID:", jobId);
 
     const response = await api.startMigration(jobId);
@@ -60,7 +64,7 @@ const handleStartMigration = async () => {
         description: `Migration started for job ID: ${jobId}`,
       });
 
-      navigate(`/migration-progress/${jobId}`);
+
     }
 
   } catch (error) {
