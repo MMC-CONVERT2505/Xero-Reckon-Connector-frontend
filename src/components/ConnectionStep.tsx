@@ -7,6 +7,7 @@ import XeroLogo from "./XeroLogo";
 import ReckonLogo from "./ReckonLogo";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
+import { useParams } from "react-router-dom";
 
 interface ConnectionStepProps {
   onComplete: () => void;
@@ -23,105 +24,114 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const [xeroToolId, setXeroToolId] = useState<number | null>(null);
   const [reckonToolId, setReckonToolId] = useState<number | null>(null);
 
+
+  console.log("useParams",useParams)
   const handleStartMigration = async () => {
-  console.log("handleStartMigration fired");
+    console.log("handleStartMigration fired");
 
-  const storedJobId = localStorage.getItem("jobId");
-  console.log("storedJobId", storedJobId);
+    const storedJobId = localStorage.getItem("jobId");
+    console.log("storedJobId", storedJobId);
 
-  if (!storedJobId) {
-    toast({
-      title: "Missing Job",
-      description: "Job ID not found. Please complete the customer info step first.",
-      variant: "destructive",
-    });
-    return;
-  }
+    if (!storedJobId) {
+      toast({
+        title: "Missing Job",
+        description: "Job ID not found. Please complete the customer info step first.",
+        variant: "destructive",
+      });
+      return;
+    }
 
-  const jobId = Number(storedJobId);
-  console.log("navigating to", `/migration-progress/${jobId}`);
+    const jobId = Number(storedJobId);
+    console.log("navigating to", `/migration-progress/${jobId}`);
 
-  navigate(`/migration-progress/${jobId}`);
+    navigate(`/migration-progress/${jobId}`);
 
-  setStartingMigration(true);
-  try {
-    await api.startMigration(jobId);
-  } catch (error) {
-    console.error("Error starting migration:", error);
-  }
-};
+    setStartingMigration(true);
+
+    setTimeout(async () => {
+      await api.startMigration(jobId);
+      navigate(`/migration-progress/${jobId}`);
+    }, 500);
+
+    // setStartingMigration(true);
+    // try {
+    //   await api.startMigration(jobId);
+    // } catch (error) {
+    //   console.error("Error starting migration:", error);
+    // }
+  };
   // ... rest of your component code stays the same ...
-  
+
   // Check if we're returning from OAuth callback
   // Check if we're returning from OAuth callback OR from file selection
-useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get("code");
-  const xeroConnectedParam = urlParams.get("xero_connected");
-  const reckonConnectedParam = urlParams.get("reckon_connected");
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    const xeroConnectedParam = urlParams.get("xero_connected");
+    const reckonConnectedParam = urlParams.get("reckon_connected");
 
-  // Case 1: came back from stored_xero_organization → ?xero_connected=true
-  if (xeroConnectedParam === "true") {
-    setXeroConnected(true);
-    toast({
-      title: "Xero Connected",
-      description: "Successfully connected to your Xero account.",
-    });
-    // Clean up URL so the param doesn't hang around
-    window.history.replaceState({}, document.title, window.location.pathname);
-    return;
-  }
-
-  // Case 2: came back from stored_reckon_organization → ?reckon_connected=true
-  // When Reckon is connected, Xero should already be connected (from previous step)
-  if (reckonConnectedParam === "true") {
-    setXeroConnected(true); // Xero was connected in previous step
-    setReckonConnected(true);
-    toast({
-      title: "Reckon Connected",
-      description: "Successfully connected to your Reckon account.",
-    });
-    // Clean up URL
-    window.history.replaceState({}, document.title, window.location.pathname);
-    return;
-  }
-
-  // Case 3: existing OAuth callback logic
-  if (code) {
-    if (
-      window.location.pathname.includes("create_auth_code") ||
-      window.location.search.includes("xero")
-    ) {
+    // Case 1: came back from stored_xero_organization → ?xero_connected=true
+    if (xeroConnectedParam === "true") {
       setXeroConnected(true);
       toast({
         title: "Xero Connected",
         description: "Successfully connected to your Xero account.",
       });
-    } else if (
-      window.location.pathname.includes("reckon_callback") ||
-      window.location.search.includes("reckon")
-    ) {
+      // Clean up URL so the param doesn't hang around
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    // Case 2: came back from stored_reckon_organization → ?reckon_connected=true
+    // When Reckon is connected, Xero should already be connected (from previous step)
+    if (reckonConnectedParam === "true") {
+      setXeroConnected(true); // Xero was connected in previous step
       setReckonConnected(true);
       toast({
         title: "Reckon Connected",
         description: "Successfully connected to your Reckon account.",
       });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
     }
 
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-}, []);
+    // Case 3: existing OAuth callback logic
+    if (code) {
+      if (
+        window.location.pathname.includes("create_auth_code") ||
+        window.location.search.includes("xero")
+      ) {
+        setXeroConnected(true);
+        toast({
+          title: "Xero Connected",
+          description: "Successfully connected to your Xero account.",
+        });
+      } else if (
+        window.location.pathname.includes("reckon_callback") ||
+        window.location.search.includes("reckon")
+      ) {
+        setReckonConnected(true);
+        toast({
+          title: "Reckon Connected",
+          description: "Successfully connected to your Reckon account.",
+        });
+      }
+
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const handleConnect = async (service: "xero" | "reckon") => {
     setConnecting(service);
-  
+
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/";
-  
+
       if (service === "xero") {
         // Get jobId from localStorage (saved earlier in CustomerInfoForm)
         const storedJobId = localStorage.getItem("jobId");
-  
+
         if (!storedJobId) {
           toast({
             title: "Missing Job",
@@ -131,10 +141,10 @@ useEffect(() => {
           setConnecting(null);
           return;
         }
-  
+
         const jobId = Number(storedJobId);
         setXeroToolId(jobId);
-  
+
         // Redirect to your new Flask route: /source_xeroconnect/<id>
         window.location.href = `${API_BASE_URL}/source_xeroconnect/${jobId}`;
       } else {
@@ -142,7 +152,7 @@ useEffect(() => {
         // or however you get this id
 
         const storedJobId = localStorage.getItem("jobId");
-  
+
         if (!storedJobId) {
           toast({
             title: "Missing Job",
@@ -153,8 +163,8 @@ useEffect(() => {
           return;
         }
         const jobId = Number(storedJobId);
-        
-        
+
+
         setReckonToolId(jobId);
         window.location.href = `${API_BASE_URL}/destination_reckonone/${jobId}`;
       }
