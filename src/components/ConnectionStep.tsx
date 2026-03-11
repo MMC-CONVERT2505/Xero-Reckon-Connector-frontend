@@ -23,8 +23,11 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const [xeroToolId, setXeroToolId] = useState<number | null>(null);
   const [reckonToolId, setReckonToolId] = useState<number | null>(null);
 
-  const handleStartMigration = async () => {
+  const   handleStartMigration = async () => {
+
   const storedJobId = localStorage.getItem("jobId");
+
+  console.log (storedJobId,"storedJobId")
 
   if (!storedJobId) {
     toast({
@@ -38,9 +41,9 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const jobId = Number(storedJobId);
 
   console.log(jobId,"jobId")
-  
-  // ✅ Redirect immediately
-  navigate(`/migration-progress/${jobId}`);
+
+  // redirect immediately
+  navigate(`/migration-progress/${jobId}`, { replace: true });
 
   setStartingMigration(true);
 
