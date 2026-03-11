@@ -37,8 +37,6 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
 
   const jobId = Number(storedJobId);
 
-
-
   // ✅ Redirect immediately
   navigate(`/migration-progress/${jobId}`);
 
