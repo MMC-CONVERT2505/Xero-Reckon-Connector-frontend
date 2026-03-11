@@ -45,14 +45,14 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
       navigate(`/migration-progress/${jobId}`);
       
       // Only show toast if redirect_url is not present (fallback)
-      if (!response.data?.redirect_url) {
-        toast({
-          title: "Migration Started",
-          description: `Migration started for job ID: ${jobId}`,
-        });
-        // Fallback: use React Router navigate if backend didn't provide redirect
-        navigate("/migration-progress");
-      }
+      // if (!response.data?.redirect_url) {
+      //   toast({
+      //     title: "Migration Started",
+      //     description: `Migration started for job ID: ${jobId}`,
+      //   });
+      //   // Fallback: use React Router navigate if backend didn't provide redirect
+      //   navigate("/migration-progress");
+      // }
       // If redirect_url is present, the redirect happens in api.startMigration
       // No need to call navigate() here
     } catch (error) {
