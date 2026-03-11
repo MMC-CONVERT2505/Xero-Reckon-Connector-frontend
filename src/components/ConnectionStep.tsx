@@ -39,17 +39,20 @@ const handleStartMigration = async () => {
     return;
   }
 
+
+  const jobId = Number(storedJobId);
+
+  console.log(jobId,"jobId")
+
+  // immediately go to the route you want
+  navigate(`/migration-process/${jobId}`);
+
   setStartingMigration(true);
 
   try {
-    const jobId = Number(storedJobId);
-
-    console.log(jobId,"jobId")
 
     await api.startMigration(jobId);
 
-    // immediately go to the route you want
-    navigate(`/migration-process/${jobId}`);
   } catch (error) {
     console.error("Error starting migration:", error);
     toast({
