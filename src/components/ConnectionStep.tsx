@@ -37,10 +37,12 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
 
   const jobId = Number(storedJobId);
 
-  setStartingMigration(true);
+
 
   // ✅ Redirect immediately
   navigate(`/migration-progress/${jobId}`);
+
+  setStartingMigration(true);
 
   try {
     // Run API in background
