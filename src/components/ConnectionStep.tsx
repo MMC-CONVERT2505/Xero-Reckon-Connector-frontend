@@ -23,119 +23,123 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const [xeroToolId, setXeroToolId] = useState<number | null>(null);
   const [reckonToolId, setReckonToolId] = useState<number | null>(null);
 
-  // ... existing code ...
+  const handleStartMigration = async () => {
 
-// ... existing code ...
+    useEffect(() => {
 
-const handleStartMigration = async () => {
-  const storedJobId = localStorage.getItem("jobId");
+      console.log("connectionstep")
+    })
+    const storedJobId = localStorage.getItem("jobId");
 
-  if (!storedJobId) {
-    toast({
-      title: "Missing Job",
-      description: "Job ID not found. Please complete the customer info step first.",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  const jobId = Number(storedJobId);
-
-  setStartingMigration(true);
-  try {
-    const res = await api.startMigration(jobId);
-
-    if (res?.error) {
-      throw new Error(res.error.message || "Failed to start migration");
+    if (!storedJobId) {
+      toast({
+        title: "Missing Job",
+        description: "Job ID not found. Please complete the customer info step first.",
+        variant: "destructive",
+      });
+      return;
     }
 
-    // If you're in /wizard, advance the wizard
-    onComplete();
+    setStartingMigration(true);
 
-    // If you're in page flow, go to the progress route
-    navigate(`/migration-progress/${jobId}`, { replace: true });
-  } catch (error) {
-    console.error("Error starting migration:", error);
-    toast({
-      title: "Error",
-      description: "Failed to start migration. Please try again.",
-      variant: "destructive",
-    });
-  } finally {
-    setStartingMigration(false);
-  }
-};
-  
+    try {
+      const jobId = Number(storedJobId);
+      // Fire the backend call - redirect is handled in api.startMigration
+      const response = await api.startMigration(jobId);
+
+      // Only show toast if redirect_url is not present (fallback)
+      if (!response.data?.redirect_url) {
+        toast({
+          title: "Migration Started",
+          description: `Migration started for job ID: ${jobId}`,
+        });
+        // Fallback: use React Router navigate if backend didn't provide redirect
+        navigate("/migration-progress");
+      }
+      // If redirect_url is present, the redirect happens in api.startMigration
+      // No need to call navigate() here
+    } catch (error) {
+      console.error("Error starting migration:", error);
+      toast({
+        title: "Error",
+        description: "Failed to start migration. Please try again.",
+        variant: "destructive",
+      });
+      setStartingMigration(false);
+    }
+  };
+  // ... rest of your component code stays the same ...
+
   // Check if we're returning from OAuth callback
   // Check if we're returning from OAuth callback OR from file selection
-useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const code = urlParams.get("code");
-  const xeroConnectedParam = urlParams.get("xero_connected");
-  const reckonConnectedParam = urlParams.get("reckon_connected");
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+    const xeroConnectedParam = urlParams.get("xero_connected");
+    const reckonConnectedParam = urlParams.get("reckon_connected");
 
-  // Case 1: came back from stored_xero_organization → ?xero_connected=true
-  if (xeroConnectedParam === "true") {
-    setXeroConnected(true);
-    toast({
-      title: "Xero Connected",
-      description: "Successfully connected to your Xero account.",
-    });
-    // Clean up URL so the param doesn't hang around
-    window.history.replaceState({}, document.title, window.location.pathname);
-    return;
-  }
-
-  // Case 2: came back from stored_reckon_organization → ?reckon_connected=true
-  // When Reckon is connected, Xero should already be connected (from previous step)
-  if (reckonConnectedParam === "true") {
-    setXeroConnected(true); // Xero was connected in previous step
-    setReckonConnected(true);
-    toast({
-      title: "Reckon Connected",
-      description: "Successfully connected to your Reckon account.",
-    });
-    // Clean up URL
-    window.history.replaceState({}, document.title, window.location.pathname);
-    return;
-  }
-
-  // Case 3: existing OAuth callback logic
-  if (code) {
-    if (
-      window.location.pathname.includes("create_auth_code") ||
-      window.location.search.includes("xero")
-    ) {
+    // Case 1: came back from stored_xero_organization → ?xero_connected=true
+    if (xeroConnectedParam === "true") {
       setXeroConnected(true);
       toast({
         title: "Xero Connected",
         description: "Successfully connected to your Xero account.",
       });
-    } else if (
-      window.location.pathname.includes("reckon_callback") ||
-      window.location.search.includes("reckon")
-    ) {
+      // Clean up URL so the param doesn't hang around
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
+    }
+
+    // Case 2: came back from stored_reckon_organization → ?reckon_connected=true
+    // When Reckon is connected, Xero should already be connected (from previous step)
+    if (reckonConnectedParam === "true") {
+      setXeroConnected(true); // Xero was connected in previous step
       setReckonConnected(true);
       toast({
         title: "Reckon Connected",
         description: "Successfully connected to your Reckon account.",
       });
+      // Clean up URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      return;
     }
 
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }
-}, []);
+    // Case 3: existing OAuth callback logic
+    if (code) {
+      if (
+        window.location.pathname.includes("create_auth_code") ||
+        window.location.search.includes("xero")
+      ) {
+        setXeroConnected(true);
+        toast({
+          title: "Xero Connected",
+          description: "Successfully connected to your Xero account.",
+        });
+      } else if (
+        window.location.pathname.includes("reckon_callback") ||
+        window.location.search.includes("reckon")
+      ) {
+        setReckonConnected(true);
+        toast({
+          title: "Reckon Connected",
+          description: "Successfully connected to your Reckon account.",
+        });
+      }
+
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
 
   const handleConnect = async (service: "xero" | "reckon") => {
     setConnecting(service);
-  
+
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/";
-  
+
       if (service === "xero") {
         // Get jobId from localStorage (saved earlier in CustomerInfoForm)
         const storedJobId = localStorage.getItem("jobId");
-  
+
         if (!storedJobId) {
           toast({
             title: "Missing Job",
@@ -145,10 +149,10 @@ useEffect(() => {
           setConnecting(null);
           return;
         }
-  
+
         const jobId = Number(storedJobId);
         setXeroToolId(jobId);
-  
+
         // Redirect to your new Flask route: /source_xeroconnect/<id>
         window.location.href = `${API_BASE_URL}/source_xeroconnect/${jobId}`;
       } else {
@@ -156,7 +160,7 @@ useEffect(() => {
         // or however you get this id
 
         const storedJobId = localStorage.getItem("jobId");
-  
+
         if (!storedJobId) {
           toast({
             title: "Missing Job",
@@ -167,8 +171,8 @@ useEffect(() => {
           return;
         }
         const jobId = Number(storedJobId);
-        
-        
+
+
         setReckonToolId(jobId);
         window.location.href = `${API_BASE_URL}/destination_reckonone/${jobId}`;
       }
@@ -191,9 +195,6 @@ useEffect(() => {
   }, [xeroToolId, reckonToolId, onToolIdsSet]);
 
   const bothConnected = xeroConnected && reckonConnected;
-
-
-  console.log(bothConnected,"bothConnected")
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -320,9 +321,9 @@ useEffect(() => {
 
       {bothConnected && (
         <div className="animate-scale-in">
-          <Button 
-            onClick={handleStartMigration} 
-            size="lg" 
+          <Button
+            onClick={handleStartMigration}
+            size="lg"
             className="w-full"
             disabled={startingMigration}
           >
