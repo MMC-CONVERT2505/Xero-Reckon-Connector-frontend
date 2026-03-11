@@ -46,7 +46,7 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   // navigate(`/migration-progress/${jobId}`);
 
   // redirect immediately
-  navigate(`/migration-progress/${jobId}`, { replace: true });
+  navigate(`/migration-progress/${jobId}`);
 
 
   setStartingMigration(true);
@@ -331,5 +331,7 @@ useEffect(() => {
     </div>
   );
 };
+
+
 
 export default ConnectionStep;
