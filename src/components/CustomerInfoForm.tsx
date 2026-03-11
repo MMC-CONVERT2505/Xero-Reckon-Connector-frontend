@@ -148,7 +148,7 @@ const CustomerInfoForm = ({ onSubmit }: CustomerInfoFormProps) => {
     <form onSubmit={handleSubmit} className="space-y-6 animate-fade-in">
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-foreground mb-2">
-          Customer Information
+          Customer Information  1
         </h2>
         <p className="text-muted-foreground">
           Please provide your business details to proceed with the migration
