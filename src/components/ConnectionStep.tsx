@@ -24,47 +24,31 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const [reckonToolId, setReckonToolId] = useState<number | null>(null);
 
   const handleStartMigration = async () => {
-    const storedJobId = localStorage.getItem("jobId");
-  
-    if (!storedJobId) {
-      toast({
-        title: "Missing Job",
-        description: "Job ID not found. Please complete the customer info step first.",
-        variant: "destructive",
-      });
-      return;
-    }
-  
-    setStartingMigration(true);
-  
-    try {
-      const jobId = Number(storedJobId);
-      // Fire the backend call - redirect is handled in api.startMigration
-      const response = await api.startMigration(jobId);
+  const storedJobId = localStorage.getItem("jobId");
 
-      navigate(`/migration-progress/${jobId}`);
-      
-      // Only show toast if redirect_url is not present (fallback)
-      // if (!response.data?.redirect_url) {
-      //   toast({
-      //     title: "Migration Started",
-      //     description: `Migration started for job ID: ${jobId}`,
-      //   });
-      //   // Fallback: use React Router navigate if backend didn't provide redirect
-      //   navigate("/migration-progress");
-      // }
-      // If redirect_url is present, the redirect happens in api.startMigration
-      // No need to call navigate() here
-    } catch (error) {
-      console.error("Error starting migration:", error);
-      toast({
-        title: "Error",
-        description: "Failed to start migration. Please try again.",
-        variant: "destructive",
-      });
-      setStartingMigration(false);
-    }
-  };
+  if (!storedJobId) {
+    toast({
+      title: "Missing Job",
+      description: "Job ID not found. Please complete the customer info step first.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  const jobId = Number(storedJobId);
+
+  setStartingMigration(true);
+
+  // ✅ Redirect immediately
+  navigate(`/migration-progress/${jobId}`);
+
+  try {
+    // Run API in background
+    await api.startMigration(jobId);
+  } catch (error) {
+    console.error("Error starting migration:", error);
+  }
+};
   // ... rest of your component code stays the same ...
   
   // Check if we're returning from OAuth callback
