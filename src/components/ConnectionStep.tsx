@@ -42,8 +42,12 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
 
   console.log(jobId,"jobId")
 
+  // // ✅ Redirect immediately
+  // navigate(`/migration-progress/${jobId}`);
+
   // redirect immediately
   navigate(`/migration-progress/${jobId}`, { replace: true });
+
 
   setStartingMigration(true);
 
