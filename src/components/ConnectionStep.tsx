@@ -23,51 +23,58 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const [xeroToolId, setXeroToolId] = useState<number | null>(null);
   const [reckonToolId, setReckonToolId] = useState<number | null>(null);
 
-  const handleStartMigration = async () => {
+  // useEffect must be at component level
+useEffect(() => {
+  console.log("connectionstep");
+}, []);
 
-    useEffect(() => {
+const handleStartMigration = async () => {
 
-      console.log("connectionstep")
-    })
-    const storedJobId = localStorage.getItem("jobId");
+  console.log("Start Migration clicked");
 
-    if (!storedJobId) {
+  const storedJobId = localStorage.getItem("jobId");
+  console.log("Stored Job ID:", storedJobId);
+
+  if (!storedJobId) {
+    toast({
+      title: "Missing Job",
+      description: "Job ID not found. Please complete the customer info step first.",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  setStartingMigration(true);
+
+  try {
+    const jobId = Number(storedJobId);
+    console.log("Calling API with Job ID:", jobId);
+
+    const response = await api.startMigration(jobId);
+
+    console.log("API Response:", response);
+
+    if (!response.data?.redirect_url) {
       toast({
-        title: "Missing Job",
-        description: "Job ID not found. Please complete the customer info step first.",
-        variant: "destructive",
+        title: "Migration Started",
+        description: `Migration started for job ID: ${jobId}`,
       });
-      return;
+
+      navigate(`/migration-progress/${jobId}`);
     }
 
-    setStartingMigration(true);
+  } catch (error) {
+    console.error("Error starting migration:", error);
 
-    try {
-      const jobId = Number(storedJobId);
-      // Fire the backend call - redirect is handled in api.startMigration
-      const response = await api.startMigration(jobId);
+    toast({
+      title: "Error",
+      description: "Failed to start migration. Please try again.",
+      variant: "destructive",
+    });
 
-      // Only show toast if redirect_url is not present (fallback)
-      if (!response.data?.redirect_url) {
-        toast({
-          title: "Migration Started",
-          description: `Migration started for job ID: ${jobId}`,
-        });
-        // Fallback: use React Router navigate if backend didn't provide redirect
-        navigate("/migration-progress");
-      }
-      // If redirect_url is present, the redirect happens in api.startMigration
-      // No need to call navigate() here
-    } catch (error) {
-      console.error("Error starting migration:", error);
-      toast({
-        title: "Error",
-        description: "Failed to start migration. Please try again.",
-        variant: "destructive",
-      });
-      setStartingMigration(false);
-    }
-  };
+    setStartingMigration(false);
+  }
+};
   // ... rest of your component code stays the same ...
 
   // Check if we're returning from OAuth callback
@@ -321,19 +328,27 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
 
       {bothConnected && (
         <div className="animate-scale-in">
+
+
+
+          
           <Button
             onClick={handleStartMigration}
             size="lg"
             className="w-full"
             disabled={startingMigration}
+
+            
           >
+
+            
             {startingMigration ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Starting Migration...
+                Starting Migration Data...
               </>
             ) : (
-              "Start Migration"
+              "Start Migration data"
             )}
           </Button>
         </div>

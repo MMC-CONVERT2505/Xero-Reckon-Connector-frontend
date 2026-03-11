@@ -41,7 +41,6 @@ const MigrationProgress = ({ onComplete, fileId, xeroToolId, reckonToolId }: Mig
 
     const initializeMigration = async () => {
       const storedJobId = localStorage.getItem("jobId");
-      
       console.log("storedJobId",storedJobId)
       
       if (storedJobId) {
