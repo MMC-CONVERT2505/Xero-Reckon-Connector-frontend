@@ -330,12 +330,8 @@ const handleStartMigration = async () => {
         </div>
       </div>
 
-      { (
+      {bothConnected && (
         <div className="animate-scale-in">
-
-
-
-          
           <Button
             onClick={handleStartMigration}
             size="lg"
