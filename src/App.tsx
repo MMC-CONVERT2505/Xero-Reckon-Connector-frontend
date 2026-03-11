@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route ,useParams} from "react-router-dom";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -12,7 +12,8 @@ import ConnectionStep from "./components/ConnectionStep";
 import MigrationWizard from "./components/MigrationWizard";
 import MigrationProgress from "./components/MigrationProgress";
 import XeroFileSelection from "./components/XeroFileSelection";
-
+// ... existing imports ...
+import { useEffect } from "react";
 
 
 import ReckonFileSelection from "./components/ReckonFileSelection";
@@ -41,19 +42,30 @@ const ConnectionStepPage = () => (
   </div>
 );
 
-const MigrationProgressPage = () => (
-  <div className="min-h-screen flex items-center justify-center p-4">
-    <div className="max-w-4xl w-full">
-      {/* For now, read IDs from localStorage so this route works standalone */}
-      <MigrationProgress
-        onComplete={() => { /* e.g. navigate to a summary page */ }}
-        fileId={Number(localStorage.getItem("jobId") || 0) || undefined}
-        xeroToolId={1}
-        reckonToolId={2}
-      />
+
+
+const MigrationProcessPage = () => {
+  const { jobId } = useParams<{ jobId: string }>();
+
+  useEffect(() => {
+    if (jobId) localStorage.setItem("jobId", jobId);
+  }, [jobId]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="max-w-4xl w-full">
+        <MigrationProgress
+          onComplete={() => {}}
+          fileId={Number(jobId) || undefined}
+          xeroToolId={1}
+          reckonToolId={2}
+        />
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -69,11 +81,11 @@ const App = () => (
           <Route path="/wizard" element={<MigrationWizard />} />
 
           {/* Individual screens as pages */}
-          <Route path="/customer-info" element={<CustomerInfoPage />} />
-          <Route path="/connect-accounts" element={<ConnectionStepPage />} />
-          <Route path="/xero-file-selection/:jobId" element={<XeroFileSelection />} />
+          <Route path="/customer-info" element={<CustomerInfoPage/>} />
+          <Route path="/connect-accounts" element={<ConnectionStepPage/>} />
+          <Route path="/xero-file-selection/:jobId" element={<XeroFileSelection/>} />
           <Route path="/Reckon-file-selection/:jobId" element={< ReckonFileSelection/>} />
-          <Route path="/migration-progress/:jobId" element={<MigrationProgressPage />} />
+          <Route path="/migration-progress/:jobId" element={<MigrationProcessPage/>} />
 
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/migrations/:jobId" element={<AdminMigrationDetails />} />

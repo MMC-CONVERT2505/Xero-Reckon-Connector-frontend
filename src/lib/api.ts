@@ -315,17 +315,17 @@ export const api = {
     return apiClient.postForm<JobResponse>(`/filejobs/jobs/create/${fileId}`, formData);
   },
 
-  startMigration: async (jobId: number): Promise<ApiResponse<{ status: string; job_id: number; redirect_url?: string }>> => {
-    const response = await apiClient.post<{ status: string; job_id: number; redirect_url?: string }>(`/startjobmigration/${jobId}`);
-    
-    // Handle redirect if provided
-    if (response.data?.redirect_url) {
-      window.location.href = response.data.redirect_url;
-      return response;
-    }
-    
-    return response;
-  },
+startMigration: async (
+  jobId: number
+): Promise<ApiResponse<{ status: string; job_id: number; redirect_url?: string }>> => {
+  const response =
+    await apiClient.post<{ status: string; job_id: number; redirect_url?: string }>(
+      `/startjobmigration/${jobId}`
+    );
+
+  // DO NOT hard redirect from here; caller will navigate in SPA
+  return response;
+},
 
   // Get job status
   getJobStatus: async (jobId: number): Promise<ApiResponse<MigrationStatus>> => {
