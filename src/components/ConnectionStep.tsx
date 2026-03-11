@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";  // Add this import
+import { redirect, useNavigate } from "react-router-dom";  // Add this import
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
 import { Check, Link2, Loader2 } from "lucide-react";
@@ -37,6 +37,8 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
 
   const jobId = Number(storedJobId);
 
+  console.log(jobId,"jobId")
+  
   // ✅ Redirect immediately
   navigate(`/migration-progress/${jobId}`);
 
