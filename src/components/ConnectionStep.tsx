@@ -29,10 +29,16 @@ useEffect(() => {
 }, []);
 
 // Default jobId to "0" when this page is hit directly (e.g. ?pair=xero-reckon)
-// without going through the Customer Info step first.
+// without going through the Customer Info step first, and remember pair/migrationId
+// so they can be forwarded to /source_xeroconnect and /destination_reckonone
+// even after the OAuth callback strips them from the URL.
 useEffect(() => {
   const urlParams = new URLSearchParams(window.location.search);
   const pair = urlParams.get("pair");
+  const migrationId = urlParams.get("migrationId");
+
+  if (pair) localStorage.setItem("pairId", pair);
+  if (migrationId) localStorage.setItem("migrationId", migrationId);
 
   if (pair !== "xero-reckon" || localStorage.getItem("jobId")) return;
 
@@ -149,11 +155,24 @@ const handleStartMigration = async () => {
     }
   }, []);
 
+  const buildPairQuery = () => {
+    const pairId = localStorage.getItem("pairId");
+    const migrationId = localStorage.getItem("migrationId");
+
+    const params = new URLSearchParams();
+    if (pairId) params.set("pair", pairId);
+    if (migrationId) params.set("migrationId", migrationId);
+
+    const qs = params.toString();
+    return qs ? `?${qs}` : "";
+  };
+
   const handleConnect = async (service: "xero" | "reckon") => {
     setConnecting(service);
 
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/";
+      const pairQuery = buildPairQuery();
 
       if (service === "xero") {
         // Get jobId from localStorage (saved earlier in CustomerInfoForm)
@@ -173,7 +192,7 @@ const handleStartMigration = async () => {
         setXeroToolId(jobId);
 
         // Redirect to your new Flask route: /source_xeroconnect/<id>
-        window.location.href = `${API_BASE_URL}/source_xeroconnect/${jobId}`;
+        window.location.href = `${API_BASE_URL}/source_xeroconnect/${jobId}${pairQuery}`;
       } else {
         // Reckon stays as before (or adjust similarly if you have a new route)
         // or however you get this id
@@ -193,7 +212,7 @@ const handleStartMigration = async () => {
 
 
         setReckonToolId(jobId);
-        window.location.href = `${API_BASE_URL}/destination_reckonone/${jobId}`;
+        window.location.href = `${API_BASE_URL}/destination_reckonone/${jobId}${pairQuery}`;
       }
     } catch (error) {
       toast({
