@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle } from "lucide-react";
 
-import axios from "axios";
+
 
 interface ReckonFile {
   book_id: string;  // Changed from tenant_id
@@ -11,6 +12,10 @@ interface ReckonFile {
 }
 
 function ReckonFileSelection() {
+  // The backend may create/advance the job by the time this page is reached,
+  // so the route param can carry a job id newer than localStorage — prefer it
+  // and persist it so every later step uses the same job.
+  const { jobId: routeJobId } = useParams<{ jobId: string }>();
   const [files, setFiles] = useState<ReckonFile[]>([]);
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null); // Changed from selectedTenantId
   const [loading, setLoading] = useState(true);
@@ -18,68 +23,8 @@ function ReckonFileSelection() {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // useEffect(() => {
-  //   const storedJobId = localStorage.getItem("jobId");
-
-  //   console.log("Stored Job ID:", storedJobId);
-
-  //   if (!storedJobId) {
-  //     setError("Job ID not found. Please complete the customer info step first.");
-  //     setLoading(false);
-  //     return;
-  //   }
-
-  //   setJobId(storedJobId);
-  //   setLoading(true);
-  //   setError(null);
-
-
-  //   // Fetch Reckon files from backend
-  //   fetch(`http://localhost:5000/get-reckon-files?job_id=${storedJobId}`)
-
-  //     .then(async (res) => {
-
-  //       console.log("Status:", res.status);
-  //       console.log("OK:", res.ok);
-  //       console.log("Content-Type:", res.headers.get("content-type"));
-
-
-  //       const rawText = await res.text();
-  //       console.log("Raw response:", rawText);
-
-
-  //       if (!res.ok) {
-  //         throw new Error(`HTTP ${res.status}`);
-  //       }
-
-  //       try {
-  //         return JSON.parse(rawText);
-  //       } catch (e) {
-  //         console.error("JSON parse failed");
-  //         throw new Error("Invalid JSON response");
-  //       }
-  //     })
-  //     .then((data) => {
-  //         console.log("Fetched Reckon files:", data);
-  //         const list: ReckonFile[] = data.files || [];
-  //         setFiles(list);
-  //         if (list.length > 0) {
-  //           setSelectedBookId(list[0].book_id);
-  //         }
-  //         setLoading(false);
-  //       })
-  //       .catch((err) => {
-  //         console.error(err);
-  //         setError("Failed to load Reckon organizations");
-  //         setLoading(false);
-  //       });
-  //   }, []);
-
-
-
-
 useEffect(() => {
-  const storedJobId = localStorage.getItem("jobId");
+  const storedJobId = routeJobId || localStorage.getItem("jobId");
 
   console.log("Stored Job ID:", storedJobId);
 
@@ -89,23 +34,29 @@ useEffect(() => {
     return;
   }
 
+  if (routeJobId) localStorage.setItem("jobId", routeJobId);
+
   setJobId(storedJobId);
   setLoading(true);
   setError(null);
 
-  axios
-    .get(`https://data-sync.mmcconvert.com/get-reckon-files`, {
-      params: { job_id: storedJobId },
-      responseType: "text", // 👈 important to log raw response like fetch
-    })
-    .then((res) => {
+  fetch(
+    `https://data-sync.mmcconvert.com/get-reckon-files?job_id=${storedJobId}`
+  )
+    .then(async (res) => {
       console.log("Status:", res.status);
-      console.log("OK:", res.status >= 200 && res.status < 300);
-      console.log("Content-Type:", res.headers["content-type"]);
-      console.log("Raw response:", res.data);
+      console.log("OK:", res.ok);
+      console.log("Content-Type:", res.headers.get("content-type"));
+
+      const rawText = await res.text();
+      console.log("Raw response:", rawText);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
 
       try {
-        return JSON.parse(res.data);
+        return JSON.parse(rawText);
       } catch (e) {
         console.error("JSON parse failed");
         throw new Error("Invalid JSON response");
@@ -124,11 +75,11 @@ useEffect(() => {
       setLoading(false);
     })
     .catch((err) => {
-      console.error("Axios error:", err);
+      console.error(err);
       setError("Failed to load Reckon organizations");
       setLoading(false);
     });
-}, []);
+}, [routeJobId]);
 
   
   const handleConnect = async () => {

@@ -44,9 +44,17 @@ useEffect(() => {
   const urlParams = parseLenientSearchParams(window.location.search);
   const pair = urlParams.get("pair");
   const migrationId = urlParams.get("migrationId");
+  const jobIdParam = urlParams.get("jobId");
 
   if (pair) localStorage.setItem("pairId", pair);
   if (migrationId) localStorage.setItem("migrationId", migrationId);
+
+  // The backend may create a brand-new job (e.g. auto-migration) and pass its
+  // real id back on the redirect — that always wins over whatever's stored.
+  if (jobIdParam) {
+    localStorage.setItem("jobId", jobIdParam);
+    return;
+  }
 
   if (pair !== "xero-reckon" || localStorage.getItem("jobId")) return;
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Loader2, AlertCircle } from "lucide-react";
@@ -11,23 +11,29 @@ interface XeroFile {
 
 
 function XeroFileSelection() {
-    // remove useSearchParams; just use localStorage jobId
+    // The backend may create a brand-new job when this page is reached
+    // (e.g. auto-migration), so the route param can carry a job id that's
+    // newer than whatever is currently in localStorage — prefer it and
+    // persist it so every later step uses the same job.
+    const { jobId: routeJobId } = useParams<{ jobId: string }>();
     const [files, setFiles] = useState<XeroFile[]>([]);
     const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [jobId, setJobId] = useState<string | null>(null);
     const [connecting, setConnecting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-  
+
     useEffect(() => {
-      const storedJobId = localStorage.getItem("jobId");
-  
+      const storedJobId = routeJobId || localStorage.getItem("jobId");
+
       if (!storedJobId) {
         setError("Job ID not found. Please complete the customer info step first.");
         setLoading(false);
         return;
       }
-  
+
+      if (routeJobId) localStorage.setItem("jobId", routeJobId);
+
       setJobId(storedJobId);
       setLoading(true);
       setError(null);
@@ -50,7 +56,7 @@ function XeroFileSelection() {
           setError("Failed to load Xero organizations");
           setLoading(false);
         });
-    }, []);
+    }, [routeJobId]);
   
     const handleConnect = async () => {
         if (!selectedTenantId || !jobId) return;
