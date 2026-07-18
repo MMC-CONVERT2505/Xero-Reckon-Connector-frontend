@@ -22,10 +22,58 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const [startingMigration, setStartingMigration] = useState(false);
   const [xeroToolId, setXeroToolId] = useState<number | null>(null);
   const [reckonToolId, setReckonToolId] = useState<number | null>(null);
+  const [provisioningJob, setProvisioningJob] = useState(false);
 
   // useEffect must be at component level
 useEffect(() => {
   console.log("connectionstep");
+}, []);
+
+// Auto-create a job when this page is hit directly (e.g. ?pair=xero-reckon)
+// without going through the Customer Info step first.
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const pair = urlParams.get("pair");
+
+  if (pair !== "xero-reckon" || localStorage.getItem("jobId")) return;
+
+  const provisionJob = async () => {
+    setProvisioningJob(true);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const response = await api.createCustomerInfo({
+      companyName: "Direct Connect",
+      contactName: "Direct Connect",
+      email: "direct-connect@mmcconvert.com",
+      phone: "0000000000",
+      startDate: oneYearAgo.toISOString().slice(0, 10),
+      endDate: today,
+    });
+
+    if (response.error || !response.data?.job_id) {
+      toast({
+        title: "Missing Job",
+        description:
+          response.error?.message ||
+          "Could not auto-create a job for this link. Please complete the customer info step first.",
+        variant: "destructive",
+      });
+      setProvisioningJob(false);
+      return;
+    }
+
+    localStorage.setItem("jobId", String(response.data.job_id));
+    toast({
+      title: "Job Created",
+      description: `A new migration job (#${response.data.job_id}) was created automatically.`,
+    });
+    setProvisioningJob(false);
+  };
+
+  provisionJob();
 }, []);
 
 const handleStartMigration = async () => {
@@ -213,6 +261,12 @@ const handleStartMigration = async () => {
         <p className="text-muted-foreground">
           Link both platforms to enable secure data migration
         </p>
+        {provisioningJob && (
+          <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground mt-2">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Preparing your migration job...
+          </p>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
@@ -247,7 +301,7 @@ const handleStartMigration = async () => {
             </div>
             <Button
               onClick={() => handleConnect("xero")}
-              disabled={xeroConnected || connecting !== null}
+              disabled={xeroConnected || connecting !== null || provisioningJob}
               variant={xeroConnected ? "outline" : "default"}
               className={cn(
                 "w-full",
@@ -302,7 +356,7 @@ const handleStartMigration = async () => {
             </div>
             <Button
               onClick={() => handleConnect("reckon")}
-              disabled={!xeroConnected || reckonConnected || connecting !== null}
+              disabled={!xeroConnected || reckonConnected || connecting !== null || provisioningJob}
               variant={reckonConnected ? "outline" : "default"}
               className={cn(
                 "w-full",
