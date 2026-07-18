@@ -14,6 +14,14 @@ interface ConnectionStepProps {
   onToolIdsSet?: (xeroId: number, reckonId: number) => void;
 }
 
+// Some upstream links arrive malformed with a stray "?" instead of "&"
+// between params (e.g. "?pair=xero-reckon?migrationId=123&journeyStep=6").
+// Normalize any "?" after the first into "&" so it parses correctly.
+const parseLenientSearchParams = (search: string): URLSearchParams => {
+  const withoutLeading = search.startsWith("?") ? search.slice(1) : search;
+  return new URLSearchParams(withoutLeading.replace(/\?/g, "&"));
+};
+
 const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProps) => {
   const navigate = useNavigate();  // Add this hook
   const [xeroConnected, setXeroConnected] = useState(false);
@@ -33,7 +41,7 @@ useEffect(() => {
 // so they can be forwarded to /source_xeroconnect and /destination_reckonone
 // even after the OAuth callback strips them from the URL.
 useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
+  const urlParams = parseLenientSearchParams(window.location.search);
   const pair = urlParams.get("pair");
   const migrationId = urlParams.get("migrationId");
 
@@ -98,7 +106,7 @@ const handleStartMigration = async () => {
 };
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
+    const urlParams = parseLenientSearchParams(window.location.search);
     const code = urlParams.get("code");
     const xeroConnectedParam = urlParams.get("xero_connected");
     const reckonConnectedParam = urlParams.get("reckon_connected");
