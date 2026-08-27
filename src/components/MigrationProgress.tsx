@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Loader2,
   AlertCircle,
@@ -11,6 +12,8 @@ import {
   Clock,
   CheckCircle2,
   Loader2 as InProgressIcon,
+  ArrowRight,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +34,9 @@ import {
 } from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
+import MmcLogo from "./MmcLogo";
+import XeroLogo from "./XeroLogo";
+import ReckonLogo from "./ReckonLogo";
 
 interface MigrationRecord {
   id: string;
@@ -104,12 +110,35 @@ const statusStyles: Record<
   },
 };
 
+const NavBar = ({ onLogout }: { onLogout: () => void }) => (
+  <div className="flex items-center justify-between border-b bg-card px-4 py-3 sm:px-6">
+    <MmcLogo className="h-8 w-auto" />
+
+    <div className="flex items-center gap-2">
+      <span className="flex h-8 w-8 items-center justify-center rounded-full border bg-background shadow-sm">
+        <XeroLogo className="h-4 w-4" />
+      </span>
+      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+      <span className="flex h-8 w-8 items-center justify-center rounded-full border bg-background shadow-sm">
+        <ReckonLogo className="h-4 w-4" />
+      </span>
+      <span className="ml-1 text-sm font-medium text-foreground">Reckon</span>
+    </div>
+
+    <Button variant="ghost" size="sm" onClick={onLogout}>
+      <LogOut className="mr-2 h-4 w-4" />
+      Logout
+    </Button>
+  </div>
+);
+
 const MigrationProgress = ({
   onComplete,
   fileId,
   xeroToolId,
   reckonToolId,
 }: MigrationProgressProps) => {
+  const navigate = useNavigate();
   const [records, setRecords] = useState<MigrationRecord[]>([]);
   const [overallProgress, setOverallProgress] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
@@ -282,27 +311,44 @@ const MigrationProgress = ({
     return matchesSearch && matchesStatus;
   });
 
+  const handleLogout = () => {
+    localStorage.removeItem("jobId");
+    localStorage.removeItem("customerInfo");
+    localStorage.removeItem("migrationStartDate");
+    localStorage.removeItem("migrationEndDate");
+    navigate("/");
+  };
+
   if (isStarting) {
     return (
-      <div className="text-center py-12">
-        <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
-        <h2 className="text-xl font-bold">Initializing Migration...</h2>
+      <div>
+        <NavBar onLogout={handleLogout} />
+        <div className="text-center py-12">
+          <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4" />
+          <h2 className="text-xl font-bold">Initializing Migration...</h2>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="text-center py-12">
-        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <p>{error}</p>
-        <Button onClick={() => window.location.reload()}>Retry</Button>
+      <div>
+        <NavBar onLogout={handleLogout} />
+        <div className="text-center py-12">
+          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+          <p>{error}</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div>
+      <NavBar onLogout={handleLogout} />
+
+      <div className="space-y-6 p-4 sm:p-6">
       {/* Page Header */}
       <div>
         <h1 className="text-3xl font-bold text-foreground">Migration Tracker</h1>
@@ -354,6 +400,8 @@ const MigrationProgress = ({
           </div>
           <p className="mt-3 text-2xl font-bold text-foreground">{formatDate(endDate)}</p>
         </div>
+
+
 
         <div className="rounded-xl p-4 bg-purple-50">
           <div className="flex items-center justify-between">
@@ -492,6 +540,7 @@ const MigrationProgress = ({
           <Button onClick={onComplete}>View Summary</Button>
         </div>
       )}
+      </div>
     </div>
   );
 };
