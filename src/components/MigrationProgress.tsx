@@ -1,10 +1,35 @@
-import { useState, useEffect } from "react";
-import { Progress } from "@/components/ui/progress";
-import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import {
+  Loader2,
+  AlertCircle,
+  Hash,
+  FileText,
+  Calendar,
+  CalendarClock,
+  RefreshCw as OverallProgressIcon,
+  Search,
+  Clock,
+  CheckCircle2,
+  Loader2 as InProgressIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { toast } from "@/hooks/use-toast";
-import XeroLogo from "./XeroLogo";
-import ReckonLogo from "./ReckonLogo";
 import { api } from "@/lib/api";
 
 interface MigrationRecord {
@@ -24,6 +49,61 @@ interface MigrationProgressProps {
   reckonToolId?: number | null;
 }
 
+const STATUS_FILTERS = ["All Status", "Pending", "In Progress", "Completed", "Error"] as const;
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const day = String(date.getDate()).padStart(2, "0");
+  const month = date.toLocaleString("en-US", { month: "short" });
+  const year = date.getFullYear();
+  return `${day} - ${month} - ${year}`;
+};
+
+const getFileName = () => {
+  try {
+    const stored = localStorage.getItem("customerInfo");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed?.companyName) return parsed.companyName as string;
+    }
+  } catch {
+    // ignore malformed storage
+  }
+  return "—";
+};
+
+const statusStyles: Record<
+  MigrationRecord["status"],
+  { label: string; badgeClass: string; icon: JSX.Element; progressClass: string }
+> = {
+  pending: {
+    label: "Pending",
+    badgeClass: "bg-muted text-muted-foreground",
+    icon: <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />,
+    progressClass: "text-muted-foreground",
+  },
+  "in-progress": {
+    label: "In Progress",
+    badgeClass: "bg-blue-50 text-blue-600",
+    icon: <InProgressIcon className="h-3 w-3 animate-spin" />,
+    progressClass: "text-blue-600",
+  },
+  completed: {
+    label: "Completed",
+    badgeClass: "bg-green-50 text-green-600",
+    icon: <CheckCircle2 className="h-3 w-3" />,
+    progressClass: "text-green-600",
+  },
+  error: {
+    label: "Error",
+    badgeClass: "bg-red-50 text-red-600",
+    icon: <AlertCircle className="h-3 w-3" />,
+    progressClass: "text-red-600",
+  },
+};
+
 const MigrationProgress = ({
   onComplete,
   fileId,
@@ -39,6 +119,13 @@ const MigrationProgress = ({
   const [totalRecords, setTotalRecords] = useState(0);
   const [recordsMigrated, setRecordsMigrated] = useState(0);
   const [totalErrors, setTotalErrors] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] =
+    useState<(typeof STATUS_FILTERS)[number]>("All Status");
+
+  const fileName = useMemo(getFileName, []);
+  const startDate = useMemo(() => localStorage.getItem("migrationStartDate"), []);
+  const endDate = useMemo(() => localStorage.getItem("migrationEndDate"), []);
 
   useEffect(() => {
     let pollingCleanup: (() => void) | null = null;
@@ -183,41 +270,17 @@ const MigrationProgress = ({
     };
   };
 
-  const handleDownloadReport = async () => {
-    try {
-      if (!jobId) return;
+  const filteredRecords = records.filter((record) => {
+    const matchesSearch = record.name
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase());
 
-      const response = await fetch(`/report_generation/${jobId}`, {
-        method: "POST",
-      });
+    const matchesStatus =
+      statusFilter === "All Status" ||
+      statusStyles[record.status].label === statusFilter;
 
-      const data = await response.json();
-
-      if (data.status === "success") {
-        data.files.forEach((file: string) => {
-          const link = document.createElement("a");
-          link.href = file;
-          link.download = "";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        });
-
-        toast({
-          title: "Report Downloaded",
-          description: "Migration report downloaded successfully",
-        });
-      } else {
-        toast({
-          title: "Error",
-          description: data.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    return matchesSearch && matchesStatus;
+  });
 
   if (isStarting) {
     return (
@@ -239,73 +302,193 @@ const MigrationProgress = ({
   }
 
   return (
-    <div>
-      {/* Header */}
-
-      <div className="text-center mb-6">
-        <div className="flex justify-center items-center gap-4 mb-3">
-          <XeroLogo className="w-10 h-10" />
-          <ReckonLogo className="w-10 h-10" />
-        </div>
-
-        <h2 className="text-xl font-bold">
-          {isComplete ? "Migration Complete" : "Migrating Data"}
-        </h2>
-
-        {jobId && <p className="text-xs">Job ID: {jobId}</p>}
+    <div className="space-y-6">
+      {/* Page Header */}
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Migration Tracker</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Please keep this page open while your data is being transferred
+        </p>
       </div>
 
-      {/* Overall Progress */}
-
-      <div className="mb-6">
-        <div className="flex justify-between text-sm mb-1">
-          <span>Overall Progress</span>
-          <span>{Math.round(overallProgress)}%</span>
-        </div>
-
-        <Progress value={overallProgress} />
-
-        <div className="text-xs mt-2 flex justify-between">
-          <span>{recordsMigrated} migrated</span>
-          <span>{totalRecords} total</span>
-          {totalErrors > 0 && <span>{totalErrors} errors</span>}
-        </div>
-      </div>
-
-      {/* Download Button after 10% */}
-
-      {overallProgress >= 10 && (
-        <div className="text-center mb-6">
-          <Button onClick={handleDownloadReport}>Download Report</Button>
-        </div>
-      )}
-
-      {/* Records */}
-
-      <div className="space-y-3">
-        {records.map((record) => (
-          <div key={record.id} className="border p-4 rounded-lg">
-            <div className="flex justify-between mb-2">
-              <span>{record.name}</span>
-              <span>{record.count}</span>
-            </div>
-
-            <Progress value={record.progress} />
-
-            <div className="flex justify-between text-xs mt-1">
-              <span>{record.progress}%</span>
-              <span>
-                {record.migrated}/{record.count}
-              </span>
-            </div>
+      {/* Stat Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="rounded-xl p-4 bg-blue-50">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Job ID</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-blue-500 text-white">
+              <Hash className="h-3.5 w-3.5" />
+            </span>
           </div>
-        ))}
+          <p className="mt-3 text-2xl font-bold text-foreground">{jobId ?? "—"}</p>
+        </div>
+
+        <div className="rounded-xl p-4 bg-indigo-50">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">File Name</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-indigo-500 text-white">
+              <FileText className="h-3.5 w-3.5" />
+            </span>
+          </div>
+          <p className="mt-3 text-2xl font-bold text-foreground truncate" title={fileName}>
+            {fileName}
+          </p>
+        </div>
+
+        <div className="rounded-xl p-4 bg-green-50">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Start Date</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 text-white">
+              <Calendar className="h-3.5 w-3.5" />
+            </span>
+          </div>
+          <p className="mt-3 text-2xl font-bold text-foreground">{formatDate(startDate)}</p>
+        </div>
+
+        <div className="rounded-xl p-4 bg-orange-50">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">End Date</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-500 text-white">
+              <CalendarClock className="h-3.5 w-3.5" />
+            </span>
+          </div>
+          <p className="mt-3 text-2xl font-bold text-foreground">{formatDate(endDate)}</p>
+        </div>
+
+        <div className="rounded-xl p-4 bg-purple-50">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-muted-foreground">Overall Progress</span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-500 text-white">
+              <OverallProgressIcon className="h-3.5 w-3.5" />
+            </span>
+          </div>
+          <p className="mt-3 text-2xl font-bold text-foreground">
+            {Math.round(overallProgress)}%
+          </p>
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/60">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all"
+              style={{ width: `${Math.min(100, Math.max(0, overallProgress))}%` }}
+            />
+          </div>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {recordsMigrated}/{totalRecords} records
+          </p>
+        </div>
+      </div>
+
+      {/* Migration Progress Section */}
+      <div className="rounded-xl border bg-card p-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">Migration Progress</h2>
+            <p className="text-sm text-muted-foreground">
+              Monitor data extraction and migration progress in real time.
+            </p>
+          </div>
+
+          <div className="flex gap-3">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search functions..."
+                className="w-56 pl-9"
+              />
+            </div>
+
+            <Select
+              value={statusFilter}
+              onValueChange={(value) =>
+                setStatusFilter(value as (typeof STATUS_FILTERS)[number])
+              }
+            >
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUS_FILTERS.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+
+      {/* Migration Details Table */}
+      <div className="rounded-xl border bg-card">
+        <div className="p-5 pb-0">
+          <h2 className="text-lg font-semibold text-foreground">Migration Details</h2>
+        </div>
+
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>S.NO</TableHead>
+              <TableHead>Function</TableHead>
+              <TableHead>Extracted from QBO</TableHead>
+              <TableHead>Pushed to MYOB</TableHead>
+              <TableHead>Status & Detail</TableHead>
+              <TableHead className="text-right">Progress</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredRecords.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                  No functions match your search.
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredRecords.map((record, index) => {
+                const style = statusStyles[record.status];
+                const detail =
+                  record.status === "error"
+                    ? `${record.errors} failed`
+                    : record.status === "pending"
+                    ? `Pending ${record.migrated}/${record.count}`
+                    : `${record.migrated}/${record.count}`;
+
+                return (
+                  <TableRow key={record.id}>
+                    <TableCell className="text-muted-foreground">
+                      {String(index + 1).padStart(2, "0")}
+                    </TableCell>
+                    <TableCell className="font-medium">{record.name}</TableCell>
+                    <TableCell>{record.count}</TableCell>
+                    <TableCell>{record.migrated}</TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${style.badgeClass}`}
+                      >
+                        {style.icon}
+                        {style.label}
+                      </span>
+                      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <p className={`text-sm font-medium ${style.progressClass}`}>
+                        {style.label}
+                      </p>
+                      <p className={`text-sm font-bold ${style.progressClass}`}>
+                        {Math.round(record.progress)}%
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Complete Button */}
-
       {isComplete && (
-        <div className="text-center mt-8">
+        <div className="text-center pt-2">
           <Button onClick={onComplete}>View Summary</Button>
         </div>
       )}
