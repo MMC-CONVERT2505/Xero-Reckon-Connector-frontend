@@ -14,9 +14,11 @@ import {
   Loader2 as InProgressIcon,
   ArrowRight,
   LogOut,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -32,8 +34,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { api } from "@/lib/api";
+import { api, MigrationRecordData } from "@/lib/api";
 import MmcLogo from "./MmcLogo";
 import XeroLogo from "./XeroLogo";
 import ReckonLogo from "./ReckonLogo";
@@ -56,6 +65,39 @@ interface MigrationProgressProps {
 }
 
 const STATUS_FILTERS = ["All Status", "Pending", "In Progress", "Completed", "Error"] as const;
+
+// Maps the function id returned by /jobs/:id/status to the Mongo collection
+// name expected by /jobs/:id/records/:table_name (mirrors the backend's
+// TABLE_CONFIG_XERO in utils/xero_tables_config.py).
+const RECORD_ID_TO_TABLE: Record<string, string> = {
+  "Existing Chart of account": "existing_coa_reckon",
+  accounts: "xero_coa",
+  "Archieved Chart of account": "xero_archived_coa",
+  customers: "xero_customer",
+  "Archieved Customer": "xero_archived_customer",
+  suppliers: "xero_supplier",
+  "Archieved Supplier": "xero_archived_supplier",
+  Job: "xero_job",
+  Item: "xero_items",
+  "Open Spend Overpayment": "xero_open_spend_overpayment",
+  "Open Receive Overpayment": "xero_open_receive_overpayment",
+  "Open AR": "xero_AR_openinvoice",
+  "Open AP": "xero_AP_openbill",
+  "Open Trial balance": "xero_trial_balance",
+  Invoice: "xero_invoice",
+  "Invoice creditnote": "xero_creditnote",
+  Bill: "xero_bill",
+  "Bill Vendorcredit": "xero_vendorcredit",
+  "Spend Money": "xero_spend_money",
+  "Receive Money": "xero_receive_money",
+  Journal: "xero_manual_journal",
+  Payrun: "xero_payrun",
+  "Bank Transfer": "xero_bank_transfer",
+  "Invoice Payment": "xero_invoice_payment",
+  "Bill Payment": "xero_bill_payment",
+};
+
+const RECORD_EXCLUDED_FIELDS = ["_id", "job_id", "task_id", "is_pushed", "error", "table_name", "payload"];
 
 const formatDate = (value?: string | null) => {
   if (!value) return "—";
@@ -151,6 +193,11 @@ const MigrationProgress = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] =
     useState<(typeof STATUS_FILTERS)[number]>("All Status");
+  const [recordsDialogOpen, setRecordsDialogOpen] = useState(false);
+  const [selectedFunctionName, setSelectedFunctionName] = useState("");
+  const [tableRecords, setTableRecords] = useState<MigrationRecordData[]>([]);
+  const [tableRecordsTotal, setTableRecordsTotal] = useState(0);
+  const [tableRecordsLoading, setTableRecordsLoading] = useState(false);
 
   const fileName = useMemo(getFileName, []);
   const startDate = useMemo(() => localStorage.getItem("migrationStartDate"), []);
@@ -310,6 +357,40 @@ const MigrationProgress = ({
 
     return matchesSearch && matchesStatus;
   });
+
+  const handleViewRecords = async (record: MigrationRecord) => {
+    const tableName = RECORD_ID_TO_TABLE[record.id];
+
+    if (!jobId || !tableName) {
+      toast({
+        title: "Not available",
+        description: "Records view isn't available for this function yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedFunctionName(record.name);
+    setRecordsDialogOpen(true);
+    setTableRecordsLoading(true);
+
+    const res = await api.getJobRecords(jobId, tableName, { limit: 200 });
+
+    if (res.error) {
+      toast({
+        title: "Error",
+        description: res.error.message || "Failed to load records",
+        variant: "destructive",
+      });
+      setTableRecords([]);
+      setTableRecordsTotal(0);
+    } else {
+      setTableRecords(res.data?.records || []);
+      setTableRecordsTotal(res.data?.total || 0);
+    }
+
+    setTableRecordsLoading(false);
+  };
 
   const handleLogout = () => {
     localStorage.removeItem("jobId");
@@ -482,12 +563,13 @@ const MigrationProgress = ({
               <TableHead>Pushed to MYOB</TableHead>
               <TableHead>Status & Detail</TableHead>
               <TableHead className="text-right">Progress</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredRecords.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   No functions match your search.
                 </TableCell>
               </TableRow>
@@ -526,6 +608,16 @@ const MigrationProgress = ({
                         {Math.round(record.progress)}%
                       </p>
                     </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleViewRecords(record)}
+                      >
+                        <Eye className="mr-1.5 h-3.5 w-3.5" />
+                        View
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -541,6 +633,89 @@ const MigrationProgress = ({
         </div>
       )}
       </div>
+
+      {/* All Records Dialog */}
+      <Dialog open={recordsDialogOpen} onOpenChange={setRecordsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>{selectedFunctionName} Records</DialogTitle>
+            <DialogDescription>
+              {tableRecordsLoading
+                ? "Loading records…"
+                : `Showing ${tableRecords.length} of ${tableRecordsTotal} records`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {tableRecordsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : tableRecords.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No records found.</p>
+          ) : (
+            <div className="max-h-[60vh] overflow-auto rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Details</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tableRecords.map((rec, idx) => {
+                    const isPushed =
+                      rec.is_pushed === 1 || rec.is_pushed === "1" || rec.is_pushed === true;
+                    const hasError = !!rec.error && String(rec.error).trim() !== "";
+                    const fields = Object.keys(rec).filter(
+                      (key) => !RECORD_EXCLUDED_FIELDS.includes(key)
+                    );
+
+                    return (
+                      <TableRow key={rec._id || idx}>
+                        <TableCell>
+                          <div className="flex flex-col gap-1">
+                            {isPushed ? (
+                              <Badge className="w-fit bg-primary/20 text-primary">Migrated</Badge>
+                            ) : (
+                              <Badge variant="outline" className="w-fit">
+                                Pending
+                              </Badge>
+                            )}
+                            {hasError && (
+                              <Badge variant="destructive" className="w-fit">
+                                Error
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 text-xs">
+                            {fields.map((key) => (
+                              <div key={key}>
+                                <span className="font-medium text-muted-foreground">{key}:</span>{" "}
+                                <span className="text-foreground">
+                                  {rec[key] !== null && rec[key] !== undefined
+                                    ? String(rec[key])
+                                    : "N/A"}
+                                </span>
+                              </div>
+                            ))}
+                            {hasError && (
+                              <div className="mt-2 rounded bg-destructive/10 p-2 text-destructive">
+                                {rec.error}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
