@@ -152,6 +152,17 @@ const statusStyles: Record<
   },
 };
 
+// The backend can leave a function's status/errors from an earlier failed
+// attempt in place even after a subsequent retry pushes every record
+// successfully. When the counts already prove all extracted records made
+// it to MYOB, trust the counts over a stale "error" status from the API.
+const getEffectiveStatus = (record: MigrationRecord): MigrationRecord["status"] => {
+  if (record.count > 0 && record.migrated >= record.count) {
+    return "completed";
+  }
+  return record.status;
+};
+
 const NavBar = ({ onLogout }: { onLogout: () => void }) => (
   <div className="flex items-center justify-between border-b bg-card px-4 py-3 sm:px-6">
     <MmcLogo className="h-8 w-auto" />
@@ -353,7 +364,7 @@ const MigrationProgress = ({
 
     const matchesStatus =
       statusFilter === "All Status" ||
-      statusStyles[record.status].label === statusFilter;
+      statusStyles[getEffectiveStatus(record)].label === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -557,13 +568,12 @@ const MigrationProgress = ({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>S.NO</TableHead>
+
               <TableHead>Function</TableHead>
               <TableHead>Extracted from QBO</TableHead>
               <TableHead>Pushed to MYOB</TableHead>
               <TableHead>Status & Detail</TableHead>
               <TableHead className="text-right">Progress</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -575,11 +585,12 @@ const MigrationProgress = ({
               </TableRow>
             ) : (
               filteredRecords.map((record, index) => {
-                const style = statusStyles[record.status];
+                const effectiveStatus = getEffectiveStatus(record);
+                const style = statusStyles[effectiveStatus];
                 const detail =
-                  record.status === "error"
+                  effectiveStatus === "error"
                     ? `${record.errors} failed`
-                    : record.status === "pending"
+                    : effectiveStatus === "pending"
                     ? `Pending ${record.migrated}/${record.count}`
                     : `${record.migrated}/${record.count}`;
 
@@ -608,16 +619,6 @@ const MigrationProgress = ({
                         {Math.round(record.progress)}%
                       </p>
                     </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleViewRecords(record)}
-                      >
-                        <Eye className="mr-1.5 h-3.5 w-3.5" />
-                        View
-                      </Button>
-                    </TableCell>
                   </TableRow>
                 );
               })
@@ -626,12 +627,7 @@ const MigrationProgress = ({
         </Table>
       </div>
 
-      {/* Complete Button */}
-      {isComplete && (
-        <div className="text-center pt-2">
-          <Button onClick={onComplete}>View Summary</Button>
-        </div>
-      )}
+      
       </div>
 
       {/* All Records Dialog */}
