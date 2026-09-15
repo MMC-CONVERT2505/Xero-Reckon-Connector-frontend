@@ -112,6 +112,12 @@ const CustomerInfoForm = ({ onSubmit }: CustomerInfoFormProps) => {
       localStorage.setItem("jobId", String(jobId));
       localStorage.setItem("migrationStartDate", formData.startDate);
       localStorage.setItem("migrationEndDate", formData.endDate);
+      // Also keyed per job id so a later visit to this specific job's progress page
+      // (e.g. /migration-progress/:jobId) resolves its own data even after the
+      // global keys above have moved on to a newer migration.
+      localStorage.setItem(`migrationFileName_${jobId}`, formData.companyName);
+      localStorage.setItem(`migrationStartDate_${jobId}`, formData.startDate);
+      localStorage.setItem(`migrationEndDate_${jobId}`, formData.endDate);
 
       toast({
         title: "Information saved",

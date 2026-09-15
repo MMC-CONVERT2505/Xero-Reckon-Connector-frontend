@@ -109,17 +109,43 @@ const formatDate = (value?: string | null) => {
   return `${day} - ${month} - ${year}`;
 };
 
-const getFileName = () => {
-  try {
-    const stored = localStorage.getItem("customerInfo");
-    if (stored) {
-      const parsed = JSON.parse(stored);
+const getStoredJobId = (): number | null => {
+  const stored = localStorage.getItem("jobId");
+  const parsed = stored ? Number(stored) : NaN;
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+// File name / dates are stored per job id (migrationFileName_<jobId> etc.) so that
+// visiting/refreshing one job's progress page (e.g. /migration-progress/:jobId) never
+// shows another job's data after the global "jobId" pointer has moved on to a newer
+// migration. Jobs created before this change only have the old global keys, which are
+// only trustworthy for whichever job is still the currently "active" one.
+const readStoredFileName = (jobId: number): string | null => {
+  const perJob = localStorage.getItem(`migrationFileName_${jobId}`);
+  if (perJob) return perJob;
+
+  if (localStorage.getItem("jobId") === String(jobId)) {
+    try {
+      const stored = localStorage.getItem("customerInfo");
+      const parsed = stored ? JSON.parse(stored) : null;
       if (parsed?.companyName) return parsed.companyName as string;
+    } catch {
+      // ignore malformed storage
     }
-  } catch {
-    // ignore malformed storage
   }
-  return "—";
+  return null;
+};
+
+const readStoredDates = (jobId: number): { start: string | null; end: string | null } => {
+  const isActiveJob = localStorage.getItem("jobId") === String(jobId);
+  return {
+    start:
+      localStorage.getItem(`migrationStartDate_${jobId}`) ??
+      (isActiveJob ? localStorage.getItem("migrationStartDate") : null),
+    end:
+      localStorage.getItem(`migrationEndDate_${jobId}`) ??
+      (isActiveJob ? localStorage.getItem("migrationEndDate") : null),
+  };
 };
 
 const statusStyles: Record<
@@ -210,13 +236,23 @@ const MigrationProgress = ({
   const [tableRecordsTotal, setTableRecordsTotal] = useState(0);
   const [tableRecordsLoading, setTableRecordsLoading] = useState(false);
 
-  // Customer Info step normally writes these to localStorage, but a job can
-  // also be reached by reusing an existing Job ID (e.g. jumping straight to
-  // Connect Accounts) without that step running in this browser session. In
-  // that case fall back to whatever the job status response reports below.
-  const [fileName, setFileName] = useState(getFileName);
-  const [startDate, setStartDate] = useState(() => localStorage.getItem("migrationStartDate"));
-  const [endDate, setEndDate] = useState(() => localStorage.getItem("migrationEndDate"));
+  // Customer Info step normally writes these to localStorage keyed by job id, but a
+  // job can also be reached by reusing an existing Job ID (e.g. jumping straight to
+  // Connect Accounts, or visiting /migration-progress/:jobId directly) without that
+  // step running in this browser session. In that case fall back to whatever the job
+  // status response reports below.
+  const [fileName, setFileName] = useState<string>(() => {
+    const id = getStoredJobId();
+    return (id ? readStoredFileName(id) : null) ?? "—";
+  });
+  const [startDate, setStartDate] = useState<string | null>(() => {
+    const id = getStoredJobId();
+    return id ? readStoredDates(id).start : null;
+  });
+  const [endDate, setEndDate] = useState<string | null>(() => {
+    const id = getStoredJobId();
+    return id ? readStoredDates(id).end : null;
+  });
 
   useEffect(() => {
     let pollingCleanup: (() => void) | null = null;
@@ -227,6 +263,10 @@ const MigrationProgress = ({
       if (storedJobId) {
         const existingJobId = Number(storedJobId);
         setJobId(existingJobId);
+        setFileName(readStoredFileName(existingJobId) ?? "—");
+        const stored = readStoredDates(existingJobId);
+        setStartDate(stored.start);
+        setEndDate(stored.end);
         setIsStarting(false);
         pollingCleanup = startPolling(existingJobId);
         return;
@@ -278,6 +318,19 @@ const MigrationProgress = ({
 
           setJobId(createdJobId);
           localStorage.setItem("jobId", String(createdJobId));
+          localStorage.setItem(`migrationStartDate_${createdJobId}`, startDate);
+          localStorage.setItem(`migrationEndDate_${createdJobId}`, today);
+          setStartDate(startDate);
+          setEndDate(today);
+          // Carry over whatever file name was already resolved (e.g. from Customer
+          // Info earlier in this session) so a later direct visit to this job's own
+          // URL can resolve it without waiting on the backend status fallback below.
+          setFileName((prev) => {
+            if (prev && prev !== "—") {
+              localStorage.setItem(`migrationFileName_${createdJobId}`, prev);
+            }
+            return prev;
+          });
 
           const startResponse = await api.startMigration(createdJobId);
 
@@ -323,15 +376,22 @@ const MigrationProgress = ({
           setRecordsMigrated(status.records_migrated || 0);
           setTotalErrors(status.total_errors || 0);
 
+          // The backend is the source of truth for this specific jobId, so always
+          // trust it over whatever was hydrated from localStorage on mount — that
+          // guards against a stale/cross-job value (e.g. left over from an older
+          // global localStorage key) permanently masking the correct one.
           const backendFileName = status.company_name || status.file_name;
           if (backendFileName) {
-            setFileName((prev) => (prev === "—" ? backendFileName : prev));
+            setFileName(backendFileName);
+            localStorage.setItem(`migrationFileName_${jobId}`, backendFileName);
           }
           if (status.start_date) {
-            setStartDate((prev) => prev || status.start_date);
+            setStartDate(status.start_date);
+            localStorage.setItem(`migrationStartDate_${jobId}`, status.start_date);
           }
           if (status.end_date) {
-            setEndDate((prev) => prev || status.end_date);
+            setEndDate(status.end_date);
+            localStorage.setItem(`migrationEndDate_${jobId}`, status.end_date);
           }
 
           if (status.records) {
@@ -419,6 +479,11 @@ const MigrationProgress = ({
   };
 
   const handleLogout = () => {
+    if (jobId) {
+      localStorage.removeItem(`migrationFileName_${jobId}`);
+      localStorage.removeItem(`migrationStartDate_${jobId}`);
+      localStorage.removeItem(`migrationEndDate_${jobId}`);
+    }
     localStorage.removeItem("jobId");
     localStorage.removeItem("customerInfo");
     localStorage.removeItem("migrationStartDate");
