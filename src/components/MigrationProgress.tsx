@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Loader2,
@@ -210,9 +210,13 @@ const MigrationProgress = ({
   const [tableRecordsTotal, setTableRecordsTotal] = useState(0);
   const [tableRecordsLoading, setTableRecordsLoading] = useState(false);
 
-  const fileName = useMemo(getFileName, []);
-  const startDate = useMemo(() => localStorage.getItem("migrationStartDate"), []);
-  const endDate = useMemo(() => localStorage.getItem("migrationEndDate"), []);
+  // Customer Info step normally writes these to localStorage, but a job can
+  // also be reached by reusing an existing Job ID (e.g. jumping straight to
+  // Connect Accounts) without that step running in this browser session. In
+  // that case fall back to whatever the job status response reports below.
+  const [fileName, setFileName] = useState(getFileName);
+  const [startDate, setStartDate] = useState(() => localStorage.getItem("migrationStartDate"));
+  const [endDate, setEndDate] = useState(() => localStorage.getItem("migrationEndDate"));
 
   useEffect(() => {
     let pollingCleanup: (() => void) | null = null;
@@ -318,6 +322,17 @@ const MigrationProgress = ({
           setTotalRecords(status.total_records || 0);
           setRecordsMigrated(status.records_migrated || 0);
           setTotalErrors(status.total_errors || 0);
+
+          const backendFileName = status.company_name || status.file_name;
+          if (backendFileName) {
+            setFileName((prev) => (prev === "—" ? backendFileName : prev));
+          }
+          if (status.start_date) {
+            setStartDate((prev) => prev || status.start_date);
+          }
+          if (status.end_date) {
+            setEndDate((prev) => prev || status.end_date);
+          }
 
           if (status.records) {
             const updatedRecords = status.records.map((record: any) => ({

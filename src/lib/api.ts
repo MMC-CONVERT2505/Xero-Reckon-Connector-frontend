@@ -161,6 +161,13 @@ export interface MigrationStatus {
   records: MigrationRecordStatus[];
   started_at?: string;
   updated_at?: string;
+  // Present when the backend has this job's customer-info on file; used as a
+  // fallback when the browser never went through the Customer Info step in
+  // this session (e.g. Job ID was reused / page was opened directly).
+  company_name?: string;
+  file_name?: string;
+  start_date?: string;
+  end_date?: string;
 }
 
 
