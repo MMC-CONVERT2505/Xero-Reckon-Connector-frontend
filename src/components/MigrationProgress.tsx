@@ -182,8 +182,17 @@ const statusStyles: Record<
 // attempt in place even after a subsequent retry pushes every record
 // successfully. When the counts already prove all extracted records made
 // it to MYOB, trust the counts over a stale "error" status from the API.
+// A function with nothing extracted has nothing left to push, so it counts as
+// done (unless it's actively running or failed).
 const getEffectiveStatus = (record: MigrationRecord): MigrationRecord["status"] => {
   if (record.count > 0 && record.migrated >= record.count) {
+    return "completed";
+  }
+  if (
+    record.count === 0 &&
+    record.status !== "in-progress" &&
+    record.status !== "error"
+  ) {
     return "completed";
   }
   return record.status;
@@ -650,8 +659,8 @@ const MigrationProgress = ({
             <TableRow>
 
               <TableHead>Function</TableHead>
-              <TableHead>Extracted from QBO</TableHead>
-              <TableHead>Pushed to MYOB</TableHead>
+              <TableHead>Extracted from Xero</TableHead>
+              <TableHead>Pushed to Reckon</TableHead>
               <TableHead>Status & Detail</TableHead>
               <TableHead className="text-right">Progress</TableHead>
             </TableRow>
@@ -696,7 +705,7 @@ const MigrationProgress = ({
                         {style.label}
                       </p>
                       <p className={`text-sm font-bold ${style.progressClass}`}>
-                        {Math.round(record.progress)}%
+                        {effectiveStatus === "completed" ? 100 : Math.round(record.progress)}%
                       </p>
                     </TableCell>
                   </TableRow>
