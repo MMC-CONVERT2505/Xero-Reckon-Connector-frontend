@@ -89,6 +89,9 @@ function XeroFileSelection() {
             return;
           }
       
+          // Remember the chosen file so the Connect Accounts page can show it
+          localStorage.setItem("xeroFileName", selectedTenant.tenant_name);
+
           // Navigate to the redirect URL from the response
           if (data.redirect_url) {
             window.location.href = data.redirect_url;

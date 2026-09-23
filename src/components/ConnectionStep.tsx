@@ -34,6 +34,8 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [migrationPreview, setMigrationPreview] = useState<MigrationPreview | null>(null);
+  const [xeroFileName, setXeroFileName] = useState<string | null>(() => localStorage.getItem("xeroFileName"));
+  const [reckonFileName, setReckonFileName] = useState<string | null>(() => localStorage.getItem("reckonFileName"));
 
   // useEffect must be at component level
 useEffect(() => {
@@ -74,6 +76,12 @@ useEffect(() => {
     urlParams.has("code") || urlParams.has("xero_connected") || urlParams.has("reckon_connected");
 
   if (!migrationId || isOAuthReturn) return;
+
+  // Starting a fresh migration — drop file names picked in a previous run.
+  localStorage.removeItem("xeroFileName");
+  localStorage.removeItem("reckonFileName");
+  setXeroFileName(null);
+  setReckonFileName(null);
 
   let cancelled = false;
   setSummaryOpen(true);
@@ -338,6 +346,11 @@ const handleStartMigration = async () => {
               <p className="text-sm text-muted-foreground mt-1">
                 Source accounting platform
               </p>
+              {xeroConnected && xeroFileName && (
+                <p className="text-sm font-medium text-foreground mt-2 break-words">
+                  File: {xeroFileName}
+                </p>
+              )}
             </div>
             <Button
               onClick={() => handleConnect("xero")}
@@ -393,6 +406,11 @@ const handleStartMigration = async () => {
               <p className="text-sm text-muted-foreground mt-1">
                 Destination accounting platform
               </p>
+              {reckonConnected && reckonFileName && (
+                <p className="text-sm font-medium text-foreground mt-2 break-words">
+                  File: {reckonFileName}
+                </p>
+              )}
             </div>
             <Button
               onClick={() => handleConnect("reckon")}

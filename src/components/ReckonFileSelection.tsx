@@ -116,6 +116,9 @@ useEffect(() => {
         return;
       }
 
+      // Remember the chosen file so the Connect Accounts page can show it
+      localStorage.setItem("reckonFileName", selectedFile.book_name);
+
       if (data.redirect_url) {
         window.location.href = data.redirect_url;
       } else {
