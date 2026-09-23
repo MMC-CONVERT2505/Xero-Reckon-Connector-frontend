@@ -657,7 +657,7 @@ const MigrationProgress = ({
         <Table>
           <TableHeader>
             <TableRow>
-
+              <TableHead>Sr.No</TableHead>
               <TableHead>Function</TableHead>
               <TableHead>Extracted from Xero</TableHead>
               <TableHead>Pushed to Reckon</TableHead>
