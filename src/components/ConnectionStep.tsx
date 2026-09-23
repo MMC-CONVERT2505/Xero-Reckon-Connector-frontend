@@ -6,7 +6,8 @@ import { Check, Link2, Loader2 } from "lucide-react";
 import XeroLogo from "./XeroLogo";
 import ReckonLogo from "./ReckonLogo";
 import { cn } from "@/lib/utils";
-import { api } from "@/lib/api";
+import { api, type MigrationPreview } from "@/lib/api";
+import MigrationSummaryDialog from "./MigrationSummaryDialog";
 
 interface ConnectionStepProps {
   onComplete: () => void;
@@ -30,6 +31,9 @@ const ConnectionStep = ({ onComplete, fileId, onToolIdsSet }: ConnectionStepProp
   const [startingMigration, setStartingMigration] = useState(false);
   const [xeroToolId, setXeroToolId] = useState<number | null>(null);
   const [reckonToolId, setReckonToolId] = useState<number | null>(null);
+  const [summaryOpen, setSummaryOpen] = useState(false);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [migrationPreview, setMigrationPreview] = useState<MigrationPreview | null>(null);
 
   // useEffect must be at component level
 useEffect(() => {
@@ -59,6 +63,42 @@ useEffect(() => {
   if (pair !== "xero-reckon" || localStorage.getItem("jobId")) return;
 
   localStorage.setItem("jobId", "0");
+}, []);
+
+// Arriving from MigrationHub with ?migrationId=... → show the migration summary
+// popup. Skip it when returning from a Xero/Reckon OAuth callback.
+useEffect(() => {
+  const urlParams = parseLenientSearchParams(window.location.search);
+  const migrationId = urlParams.get("migrationId");
+  const isOAuthReturn =
+    urlParams.has("code") || urlParams.has("xero_connected") || urlParams.has("reckon_connected");
+
+  if (!migrationId || isOAuthReturn) return;
+
+  let cancelled = false;
+  setSummaryOpen(true);
+  setSummaryLoading(true);
+
+  api.getMigrationPreview(migrationId).then((response) => {
+    if (cancelled) return;
+    setSummaryLoading(false);
+
+    if (response.error || !response.data) {
+      setSummaryOpen(false);
+      toast({
+        title: "Migration Not Found",
+        description: response.error?.message || "Could not load migration details.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setMigrationPreview(response.data);
+  });
+
+  return () => {
+    cancelled = true;
+  };
 }, []);
 
 const handleStartMigration = async () => {
@@ -252,6 +292,14 @@ const handleStartMigration = async () => {
 
   return (
     <div className="space-y-8 animate-fade-in">
+      <MigrationSummaryDialog
+        open={summaryOpen}
+        loading={summaryLoading}
+        preview={migrationPreview}
+        onCancel={() => setSummaryOpen(false)}
+        onNext={() => setSummaryOpen(false)}
+      />
+
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-foreground mb-2">
           Connect Your Accounts

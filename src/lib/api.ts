@@ -236,8 +236,24 @@ export interface MigrationDetails {
 }
 
 
+export interface MigrationPreview {
+  migration_id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  entity_name: string;
+  start_date: string;
+  end_date: string;
+  is_free: boolean;
+}
+
 // API Functions
 export const api = {
+  // MigrationHub summary shown before connecting accounts
+  getMigrationPreview: async (migrationId: string): Promise<ApiResponse<MigrationPreview>> => {
+    return apiClient.get<MigrationPreview>(`/api/migration-preview/${encodeURIComponent(migrationId)}`);
+  },
+
   // Create tool file (customer info)
 
 
