@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://data-sync.mmcconvert.com";
 
 
 
@@ -16,6 +18,10 @@ function ReckonFileSelection() {
   // so the route param can carry a job id newer than localStorage — prefer it
   // and persist it so every later step uses the same job.
   const { jobId: routeJobId } = useParams<{ jobId: string }>();
+  const navigate = useNavigate();
+  // Set once a file was picked before — i.e. the user came back via
+  // "Reconnect File" on the Connect Accounts page.
+  const previousFileName = localStorage.getItem("reckonFileName");
   const [files, setFiles] = useState<ReckonFile[]>([]);
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null); // Changed from selectedTenantId
   const [loading, setLoading] = useState(true);
@@ -69,17 +75,18 @@ useEffect(() => {
       setFiles(list);
 
       if (list.length > 0) {
-        setSelectedBookId(list[0].book_id);
+        const previous = list.find((f) => f.book_name === previousFileName);
+        setSelectedBookId((previous ?? list[0]).book_id);
       }
 
       setLoading(false);
     })
     .catch((err) => {
       console.error(err);
-      setError("Failed to load Reckon organizations");
+      setError("Failed to load Reckon organizations. Your Reckon session may have expired — please sign in again.");
       setLoading(false);
     });
-}, [routeJobId]);
+}, [routeJobId, previousFileName]);
 
   
   const handleConnect = async () => {
@@ -166,6 +173,18 @@ useEffect(() => {
           </div>
         )}
 
+        {error && jobId && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              window.location.href = `${API_BASE_URL}/destination_reckonone/${jobId}`;
+            }}
+          >
+            Sign in to Reckon again
+          </Button>
+        )}
+
         {files.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No Reckon organizations found for this job.
@@ -218,6 +237,18 @@ useEffect(() => {
             "Connect Reckon File"
           )}
         </Button>
+
+        {previousFileName && (
+          <Button
+            variant="ghost"
+            className="w-full"
+            disabled={connecting}
+            onClick={() => navigate("/connect-accounts")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Keep current file ({previousFileName})
+          </Button>
+        )}
       </Card>
     </div>
   );

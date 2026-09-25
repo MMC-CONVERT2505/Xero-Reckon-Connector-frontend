@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";  // Add this import
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { Check, Link2, Loader2 } from "lucide-react";
+import { Check, Link2, Loader2, RefreshCw } from "lucide-react";
 import XeroLogo from "./XeroLogo";
 import ReckonLogo from "./ReckonLogo";
 import { cn } from "@/lib/utils";
@@ -102,6 +102,32 @@ useEffect(() => {
     }
 
     setMigrationPreview(response.data);
+  });
+
+  return () => {
+    cancelled = true;
+  };
+}, []);
+
+// Restore which files are already selected for this job from the backend.
+// The OAuth/file-selection redirects only flag the service that was just
+// connected (?xero_connected / ?reckon_connected), so without this, reconnecting
+// one file would make the other card look disconnected again.
+useEffect(() => {
+  const urlParams = parseLenientSearchParams(window.location.search);
+  const isOAuthReturn =
+    urlParams.has("code") || urlParams.has("xero_connected") || urlParams.has("reckon_connected");
+  // Fresh migration from MigrationHub — nothing to restore.
+  if (urlParams.get("migrationId") && !isOAuthReturn) return;
+
+  const jobId = Number(urlParams.get("jobId") || localStorage.getItem("jobId"));
+  if (!jobId) return;
+
+  let cancelled = false;
+  api.getConnectionStatus(jobId).then((response) => {
+    if (cancelled || !response.data) return;
+    if (response.data.xero_connected) setXeroConnected(true);
+    if (response.data.reckon_connected) setReckonConnected(true);
   });
 
   return () => {
@@ -289,6 +315,28 @@ const handleStartMigration = async () => {
   };
 
 
+  // Send the user back to the file picker for an already-authorised service so
+  // they can swap a wrongly chosen file. The selection page falls back to a
+  // fresh sign-in if the stored token has expired.
+  const handleReconnect = (service: "xero" | "reckon") => {
+    const storedJobId = localStorage.getItem("jobId");
+
+    if (!storedJobId) {
+      toast({
+        title: "Missing Job",
+        description: "Job ID not found. Please complete the customer info step first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    navigate(
+      service === "xero"
+        ? `/xero-file-selection/${storedJobId}`
+        : `/Reckon-file-selection/${storedJobId}`
+    );
+  };
+
   // Notify parent when both tool IDs are set
   useEffect(() => {
     if (xeroToolId && reckonToolId && onToolIdsSet) {
@@ -375,6 +423,18 @@ const handleStartMigration = async () => {
                 "Connect Xero"
               )}
             </Button>
+            {xeroConnected && (
+              <Button
+                onClick={() => handleReconnect("xero")}
+                disabled={connecting !== null || startingMigration}
+                variant="ghost"
+                size="sm"
+                className="w-full"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Reconnect File
+              </Button>
+            )}
           </div>
         </div>
 
@@ -435,6 +495,18 @@ const handleStartMigration = async () => {
                 "Connect Reckon"
               )}
             </Button>
+            {reckonConnected && (
+              <Button
+                onClick={() => handleReconnect("reckon")}
+                disabled={connecting !== null || startingMigration}
+                variant="ghost"
+                size="sm"
+                className="w-full"
+              >
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Reconnect File
+              </Button>
+            )}
           </div>
         </div>
       </div>

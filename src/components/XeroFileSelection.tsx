@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, ArrowLeft } from "lucide-react";
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "https://data-sync.mmcconvert.com";
 
 interface XeroFile {
   tenant_id: string;
@@ -16,6 +18,10 @@ function XeroFileSelection() {
     // newer than whatever is currently in localStorage — prefer it and
     // persist it so every later step uses the same job.
     const { jobId: routeJobId } = useParams<{ jobId: string }>();
+    const navigate = useNavigate();
+    // Set once a file was picked before — i.e. the user came back via
+    // "Reconnect File" on the Connect Accounts page.
+    const previousFileName = localStorage.getItem("xeroFileName");
     const [files, setFiles] = useState<XeroFile[]>([]);
     const [selectedTenantId, setSelectedTenantId] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
@@ -39,24 +45,28 @@ function XeroFileSelection() {
       setError(null);
   
       fetch(`https://data-sync.mmcconvert.com//get-xero-files?job_id=${storedJobId}`)
-        .then((res) => res.json())
-
-
+        .then(async (res) => {
+          const data = await res.json();
+          // An expired token surfaces here when reconnecting later on.
+          if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}`);
+          return data;
+        })
         .then((data) => {
           console.log("Fetched Xero files:", data);
           const list: XeroFile[] = data.files || [];
           setFiles(list);
           if (list.length > 0) {
-            setSelectedTenantId(list[0].tenant_id);
+            const previous = list.find((f) => f.tenant_name === previousFileName);
+            setSelectedTenantId((previous ?? list[0]).tenant_id);
           }
           setLoading(false);
         })
         .catch((err) => {
           console.error(err);
-          setError("Failed to load Xero organizations");
+          setError("Failed to load Xero organizations. Your Xero session may have expired — please sign in again.");
           setLoading(false);
         });
-    }, [routeJobId]);
+    }, [routeJobId, previousFileName]);
   
     const handleConnect = async () => {
         if (!selectedTenantId || !jobId) return;
@@ -141,6 +151,18 @@ function XeroFileSelection() {
           </div>
         )}
 
+        {error && jobId && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => {
+              window.location.href = `${API_BASE_URL}/source_xeroconnect/${jobId}`;
+            }}
+          >
+            Sign in to Xero again
+          </Button>
+        )}
+
         {files.length === 0 ? (
           <p className="text-sm text-muted-foreground">
             No Xero organizations found for this job.
@@ -193,6 +215,18 @@ function XeroFileSelection() {
             "Connect File"
           )}
         </Button>
+
+        {previousFileName && (
+          <Button
+            variant="ghost"
+            className="w-full"
+            disabled={connecting}
+            onClick={() => navigate("/connect-accounts")}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Keep current file ({previousFileName})
+          </Button>
+        )}
       </Card>
     </div>
   );

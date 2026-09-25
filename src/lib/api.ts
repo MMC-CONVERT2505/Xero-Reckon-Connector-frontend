@@ -247,8 +247,23 @@ export interface MigrationPreview {
   is_free: boolean;
 }
 
+export interface ConnectionStatus {
+  job_id: number;
+  xero_connected: boolean;
+  xero_company_id: string | null;
+  reckon_connected: boolean;
+  reckon_company_id: string | null;
+}
+
 // API Functions
 export const api = {
+  // Which Xero/Reckon files are already selected for a job — lets the Connect
+  // Accounts page restore its state after the user reconnects a file.
+  getConnectionStatus: async (jobId: number): Promise<ApiResponse<ConnectionStatus>> => {
+    return apiClient.get<ConnectionStatus>(`/api/connection-status/${jobId}`);
+  },
+
+
   // MigrationHub summary shown before connecting accounts
   getMigrationPreview: async (migrationId: string): Promise<ApiResponse<MigrationPreview>> => {
     return apiClient.get<MigrationPreview>(`/api/migration-preview/${encodeURIComponent(migrationId)}`);
