@@ -15,6 +15,7 @@ import {
   ArrowRight,
   LogOut,
   Eye,
+  LifeBuoy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,6 +47,7 @@ import { api, MigrationRecordData } from "@/lib/api";
 import MmcLogo from "./MmcLogo";
 import XeroLogo from "./XeroLogo";
 import ReckonLogo from "./ReckonLogo";
+import RequestHelpDialog from "./RequestHelpDialog";
 
 interface MigrationRecord {
   id: string;
@@ -244,6 +246,7 @@ const MigrationProgress = ({
   const [tableRecords, setTableRecords] = useState<MigrationRecordData[]>([]);
   const [tableRecordsTotal, setTableRecordsTotal] = useState(0);
   const [tableRecordsLoading, setTableRecordsLoading] = useState(false);
+  const [helpDialogOpen, setHelpDialogOpen] = useState(false);
 
   // Customer Info step normally writes these to localStorage keyed by job id, but a
   // job can also be reached by reusing an existing Job ID (e.g. jumping straight to
@@ -531,11 +534,21 @@ const MigrationProgress = ({
 
       <div className="space-y-6 p-4 sm:p-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-foreground">Migration Tracker</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Please keep this page open while your data is being transferred
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-foreground">Migration Tracker</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Please keep this page open while your data is being transferred
+          </p>
+        </div>
+        <Button
+          onClick={() => setHelpDialogOpen(true)}
+          disabled={!jobId}
+          className="bg-amber-400 text-white hover:bg-amber-500"
+        >
+          <LifeBuoy />
+          Request Help
+        </Button>
       </div>
 
       {/* Stat Cards */}
@@ -718,6 +731,12 @@ const MigrationProgress = ({
 
       
       </div>
+
+      <RequestHelpDialog
+        open={helpDialogOpen}
+        onOpenChange={setHelpDialogOpen}
+        jobId={jobId}
+      />
 
       {/* All Records Dialog */}
       <Dialog open={recordsDialogOpen} onOpenChange={setRecordsDialogOpen}>

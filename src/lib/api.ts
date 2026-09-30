@@ -264,6 +264,17 @@ export const api = {
   },
 
 
+  // "Request Help" on the Migration Tracker — backend emails the support team.
+  sendHelpRequest: async (
+    jobId: number,
+    message: string
+  ): Promise<ApiResponse<{ status: string; message: string }>> => {
+    return apiClient.post<{ status: string; message: string }>(
+      `/api/jobs/${jobId}/help-request`,
+      { message }
+    );
+  },
+
   // MigrationHub summary shown before connecting accounts
   getMigrationPreview: async (migrationId: string): Promise<ApiResponse<MigrationPreview>> => {
     return apiClient.get<MigrationPreview>(`/api/migration-preview/${encodeURIComponent(migrationId)}`);
