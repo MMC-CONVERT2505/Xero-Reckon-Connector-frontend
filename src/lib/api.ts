@@ -280,6 +280,18 @@ export const api = {
     return apiClient.get<MigrationPreview>(`/api/migration-preview/${encodeURIComponent(migrationId)}`);
   },
 
+  // "Next — Connect Your Accounts" on the summary popup — backend emails the
+  // customer a "migration queued" confirmation to the address MigrationHub has on file.
+  sendMigrationConfirmation: async (
+    migrationId: string,
+    pair: string
+  ): Promise<ApiResponse<{ status: string; message: string; email: string }>> => {
+    return apiClient.post<{ status: string; message: string; email: string }>(
+      `/api/migration-preview/${encodeURIComponent(migrationId)}/confirmation-email`,
+      { pair }
+    );
+  },
+
   // Create tool file (customer info)
 
 

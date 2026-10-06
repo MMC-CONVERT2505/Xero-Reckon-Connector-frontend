@@ -135,6 +135,33 @@ useEffect(() => {
   };
 }, []);
 
+// "Next — Connect Your Accounts": email the customer a confirmation once per
+// migration, without blocking them from moving on to connect their accounts.
+const handleSummaryNext = () => {
+  setSummaryOpen(false);
+  const migrationId = migrationPreview?.migration_id;
+  const sentKey = `confirmationEmailSent_${migrationId}`;
+  if (!migrationId || localStorage.getItem(sentKey)) return;
+
+  localStorage.setItem(sentKey, "1");
+  const pair = localStorage.getItem("pairId") || "xero-reckon";
+  api.sendMigrationConfirmation(migrationId, pair).then((response) => {
+    if (response.error) {
+      localStorage.removeItem(sentKey);
+      toast({
+        title: "Confirmation Email Not Sent",
+        description: response.error.message || "We couldn't send your confirmation email.",
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({
+      title: "Confirmation Email Sent",
+      description: `A summary of your migration was sent to ${response.data?.email || migrationPreview?.email}.`,
+    });
+  });
+};
+
 const handleStartMigration = async () => {
 
   console.log("Start Migration clicked");
@@ -353,7 +380,7 @@ const handleStartMigration = async () => {
         loading={summaryLoading}
         preview={migrationPreview}
         onCancel={() => setSummaryOpen(false)}
-        onNext={() => setSummaryOpen(false)}
+        onNext={handleSummaryNext}
       />
 
       <div className="text-center mb-8">
