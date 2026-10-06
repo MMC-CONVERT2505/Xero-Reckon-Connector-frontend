@@ -168,7 +168,15 @@ export interface MigrationStatus {
   file_name?: string;
   start_date?: string;
   end_date?: string;
+  // Which stage the migration is in: every function is first fetched from Xero,
+  // then written to Reckon. current_function is the Task.function_name running now.
+  phase?: MigrationPhase;
+  current_function?: string | null;
+  phase_completed?: number;
+  phase_total?: number;
 }
+
+export type MigrationPhase = "pending" | "fetching" | "writing" | "completed";
 
 
 

@@ -16,6 +16,8 @@ import {
   LogOut,
   Eye,
   LifeBuoy,
+  DownloadCloud,
+  UploadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +45,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { api, MigrationRecordData } from "@/lib/api";
+import { api, MigrationPhase, MigrationRecordData, MigrationStatus } from "@/lib/api";
 import MmcLogo from "./MmcLogo";
 import XeroLogo from "./XeroLogo";
 import ReckonLogo from "./ReckonLogo";
@@ -200,6 +202,102 @@ const getEffectiveStatus = (record: MigrationRecord): MigrationRecord["status"] 
   return record.status;
 };
 
+interface PhaseInfo {
+  phase: MigrationPhase;
+  currentFunction: string | null;
+  completed: number;
+  total: number;
+}
+
+// Older backends don't report a phase, so approximate it from the counts:
+// nothing extracted yet means we're still fetching, any pushed/failed record
+// means writing has started.
+const derivePhase = (status: MigrationStatus): PhaseInfo => {
+  if (status.phase) {
+    return {
+      phase: status.phase,
+      currentFunction: status.current_function ?? null,
+      completed: status.phase_completed ?? 0,
+      total: status.phase_total ?? 0,
+    };
+  }
+
+  const inProgress = status.records?.find((r) => r.status === "in-progress");
+  let phase: MigrationPhase = "fetching";
+  if (status.status === "completed") phase = "completed";
+  else if ((status.records_migrated || 0) + (status.total_errors || 0) > 0) phase = "writing";
+
+  return {
+    phase,
+    currentFunction: phase === "writing" ? inProgress?.name ?? null : null,
+    completed: 0,
+    total: 0,
+  };
+};
+
+const phaseStyles: Record<
+  MigrationPhase,
+  { title: string; containerClass: string; iconClass: string; icon: JSX.Element }
+> = {
+  pending: {
+    title: "Preparing migration",
+    containerClass: "border-muted bg-muted/40",
+    iconClass: "bg-muted-foreground",
+    icon: <Clock className="h-4 w-4" />,
+  },
+  fetching: {
+    title: "Fetching data from Xero",
+    containerClass: "border-blue-200 bg-blue-50",
+    iconClass: "bg-blue-500",
+    icon: <DownloadCloud className="h-4 w-4" />,
+  },
+  writing: {
+    title: "Writing data to Reckon",
+    containerClass: "border-amber-200 bg-amber-50",
+    iconClass: "bg-amber-500",
+    icon: <UploadCloud className="h-4 w-4" />,
+  },
+  completed: {
+    title: "Migration completed",
+    containerClass: "border-green-200 bg-green-50",
+    iconClass: "bg-green-500",
+    icon: <CheckCircle2 className="h-4 w-4" />,
+  },
+};
+
+const PhaseBanner = ({ info }: { info: PhaseInfo }) => {
+  const style = phaseStyles[info.phase];
+  const isActive = info.phase === "fetching" || info.phase === "writing";
+
+  return (
+    <div
+      className={`mt-4 flex items-center gap-3 rounded-lg border p-3 ${style.containerClass}`}
+      aria-live="polite"
+    >
+      <span
+        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-white ${style.iconClass}`}
+      >
+        {style.icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold text-foreground">
+          {style.title}
+          {isActive && info.currentFunction && (
+            <span className="font-normal text-muted-foreground"> — {info.currentFunction}</span>
+          )}
+        </p>
+        {isActive && info.total > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {info.completed} of {info.total} functions{" "}
+            {info.phase === "fetching" ? "fetched" : "written"}
+          </p>
+        )}
+      </div>
+      {isActive && <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" />}
+    </div>
+  );
+};
+
 const NavBar = ({ onLogout }: { onLogout: () => void }) => (
   <div className="flex items-center justify-between border-b bg-card px-4 py-3 sm:px-6">
     <MmcLogo className="h-8 w-auto" />
@@ -247,6 +345,7 @@ const MigrationProgress = ({
   const [tableRecordsTotal, setTableRecordsTotal] = useState(0);
   const [tableRecordsLoading, setTableRecordsLoading] = useState(false);
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
+  const [phaseInfo, setPhaseInfo] = useState<PhaseInfo | null>(null);
 
   // Customer Info step normally writes these to localStorage keyed by job id, but a
   // job can also be reached by reusing an existing Job ID (e.g. jumping straight to
@@ -344,21 +443,27 @@ const MigrationProgress = ({
             return prev;
           });
 
-          const startResponse = await api.startMigration(createdJobId);
-
-          if (startResponse.error) {
-            setError(startResponse.error.message);
-            setIsStarting(false);
-            return;
-          }
+          // /startjobmigration only responds once the whole migration has run,
+          // so start polling first; otherwise the fetching/writing status would
+          // never be visible while the migration is actually in progress.
+          setPhaseInfo({ phase: "fetching", currentFunction: null, completed: 0, total: 0 });
+          setIsStarting(false);
+          pollingCleanup = startPolling(createdJobId);
 
           toast({
             title: "Migration Started",
             description: "Data migration started successfully",
           });
 
-          setIsStarting(false);
-          pollingCleanup = startPolling(createdJobId);
+          const startResponse = await api.startMigration(createdJobId);
+
+          if (startResponse.error) {
+            toast({
+              title: "Migration Error",
+              description: startResponse.error.message,
+              variant: "destructive",
+            });
+          }
         }
       } catch (err) {
         setError("Unexpected error occurred");
@@ -387,6 +492,7 @@ const MigrationProgress = ({
           setTotalRecords(status.total_records || 0);
           setRecordsMigrated(status.records_migrated || 0);
           setTotalErrors(status.total_errors || 0);
+          setPhaseInfo(derivePhase(status));
 
           // The backend is the source of truth for this specific jobId, so always
           // trust it over whatever was hydrated from localStorage on mount — that
@@ -659,6 +765,8 @@ const MigrationProgress = ({
             </Select>
           </div>
         </div>
+
+        {phaseInfo && <PhaseBanner info={isComplete ? { ...phaseInfo, phase: "completed" } : phaseInfo} />}
       </div>
 
       {/* Migration Details Table */}
