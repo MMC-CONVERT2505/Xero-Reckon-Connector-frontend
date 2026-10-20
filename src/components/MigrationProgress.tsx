@@ -182,6 +182,13 @@ const statusStyles: Record<
   },
 };
 
+const partialErrorStyle = {
+  label: "Completed with errors",
+  badgeClass: "bg-amber-50 text-amber-600",
+  icon: <AlertCircle className="h-3 w-3" />,
+  progressClass: "text-amber-600",
+};
+
 // The backend can leave a function's status/errors from an earlier failed
 // attempt in place even after a subsequent retry pushes every record
 // successfully. When the counts already prove all extracted records made
@@ -796,9 +803,12 @@ const MigrationProgress = ({
             ) : (
               filteredRecords.map((record, index) => {
                 const effectiveStatus = getEffectiveStatus(record);
-                const style = statusStyles[effectiveStatus];
-                const detail =
-                  effectiveStatus === "error"
+                // Some records pushed, the rest failed: finished, but with errors.
+                const partiallyFailed = effectiveStatus === "error" && record.migrated > 0;
+                const style = partiallyFailed ? partialErrorStyle : statusStyles[effectiveStatus];
+                const detail = partiallyFailed
+                  ? `${record.migrated}/${record.count}`
+                  : effectiveStatus === "error"
                     ? `${record.errors} failed`
                     : effectiveStatus === "pending"
                     ? `Pending ${record.migrated}/${record.count}`
