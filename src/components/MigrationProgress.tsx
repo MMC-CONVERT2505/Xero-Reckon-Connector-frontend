@@ -616,6 +616,9 @@ const MigrationProgress = ({
     navigate("/");
   };
 
+  // Once the job is done, show 100% even if some records failed.
+  const displayProgress = isComplete ? 100 : overallProgress;
+
   if (isStarting) {
     return (
       <div>
@@ -683,7 +686,7 @@ const MigrationProgress = ({
               <FileText className="h-3.5 w-3.5" />
             </span>
           </div>
-          <p className="mt-3 text-2xl font-bold text-foreground truncate" title={fileName}>
+          <p className="mt-3 text-2xl font-bold text-foreground break-words" title={fileName}>
             {fileName}
           </p>
         </div>
@@ -718,17 +721,15 @@ const MigrationProgress = ({
             </span>
           </div>
           <p className="mt-3 text-2xl font-bold text-foreground">
-            {Math.round(overallProgress)}%
+            {Math.round(displayProgress)}%
           </p>
           <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/60">
             <div
               className="h-full rounded-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all"
-              style={{ width: `${Math.min(100, Math.max(0, overallProgress))}%` }}
+              style={{ width: `${Math.min(100, Math.max(0, displayProgress))}%` }}
             />
           </div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {recordsMigrated}/{totalRecords} records
-          </p>
+         
         </div>
       </div>
 
