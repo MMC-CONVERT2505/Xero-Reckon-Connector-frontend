@@ -14,9 +14,9 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { api } from "@/lib/api";
 
-const SUPPORT_EMAIL = "support@mmcconvert.com";
-const SUPPORT_PHONE = "+1 (555) 123-4567";
-const SUPPORT_HOURS = "Mon-Fri, 9:00 AM - 6:00 PM EST";
+const SUPPORT_EMAIL = "reckon@mmcconvert.com";
+const SUPPORT_PHONE = "+919926477000";
+
 
 interface RequestHelpDialogProps {
   open: boolean;
@@ -114,10 +114,7 @@ const RequestHelpDialog = ({ open, onOpenChange, jobId }: RequestHelpDialogProps
               <Phone className="h-4 w-4 text-muted-foreground" />
               <span className="font-semibold">Phone:</span> {SUPPORT_PHONE}
             </p>
-            <p className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold">Hours:</span> {SUPPORT_HOURS}
-            </p>
+            
           </div>
         </div>
 

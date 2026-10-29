@@ -533,13 +533,17 @@ const MigrationProgress = ({
             setRecords(updatedRecords);
           }
 
-          if (status.status === "completed") {
+          // A job that finishes with failed records reports status "error", but
+          // its phase still moves to "completed" once every write task is done.
+          if (status.status === "completed" || status.phase === "completed") {
             setIsComplete(true);
             clearInterval(interval);
 
             toast({
               title: "Migration Complete",
-              description: `${status.records_migrated} records migrated`,
+              description: status.total_errors
+                ? `${status.records_migrated} records migrated, ${status.total_errors} failed`
+                : `${status.records_migrated} records migrated`,
             });
           }
         }
