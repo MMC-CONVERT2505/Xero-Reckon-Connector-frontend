@@ -320,10 +320,6 @@ const NavBar = ({ onLogout }: { onLogout: () => void }) => (
       <span className="ml-1 text-sm font-medium text-foreground">Reckon</span>
     </div>
 
-    <Button variant="ghost" size="sm" onClick={onLogout}>
-      <LogOut className="mr-2 h-4 w-4" />
-      Logout
-    </Button>
   </div>
 );
 
