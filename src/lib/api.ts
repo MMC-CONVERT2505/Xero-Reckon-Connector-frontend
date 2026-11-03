@@ -274,12 +274,11 @@ export const api = {
 
   // "Request Help" on the Migration Tracker — backend emails the support team.
   sendHelpRequest: async (
-    jobId: number,
-    message: string
+    jobId: number
   ): Promise<ApiResponse<{ status: string; message: string }>> => {
     return apiClient.post<{ status: string; message: string }>(
       `/api/jobs/${jobId}/help-request`,
-      { message }
+      {}
     );
   },
 
