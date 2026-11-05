@@ -55,7 +55,10 @@ const RequestHelpDialog = ({ open, onOpenChange, jobId }: RequestHelpDialogProps
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-lg gap-5 rounded-2xl">
+      <DialogContent
+        className="max-w-lg gap-5 rounded-2xl sm:rounded-2xl"
+        overlayClassName="bg-black/40 backdrop-blur-sm"
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Request Migration Assistance</DialogTitle>
         </DialogHeader>
@@ -74,21 +77,21 @@ const RequestHelpDialog = ({ open, onOpenChange, jobId }: RequestHelpDialogProps
           </p>
           <p>
             <span className="mr-3 font-semibold">Phone:</span>
-            {SUPPORT_PHONE}
+            <span className="text-muted-foreground">{SUPPORT_PHONE}</span>
           </p>
         </div>
 
-        <DialogFooter className="gap-2 pt-2 sm:space-x-0">
+        <DialogFooter className="gap-3 pt-2 sm:space-x-0">
           <Button
             variant="outline"
-            className="h-11 rounded-xl"
+            className="rounded-xl"
             onClick={() => handleOpenChange(false)}
             disabled={isSending}
           >
             Cancel
           </Button>
           <Button
-            className="h-11 rounded-xl bg-amber-400 font-semibold text-foreground hover:bg-amber-500"
+            className="rounded-xl bg-amber-400 font-bold text-foreground hover:bg-amber-500"
             onClick={handleSend}
             disabled={!jobId || isSending}
           >
