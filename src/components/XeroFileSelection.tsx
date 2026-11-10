@@ -118,7 +118,7 @@ function XeroFileSelection() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-[calc(100vh-72px)] flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
           <p className="text-muted-foreground">Loading Xero organizations...</p>
@@ -128,7 +128,7 @@ function XeroFileSelection() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-[calc(100vh-72px)] bg-background flex items-center justify-center px-4">
       <Card className="w-full max-w-xl p-6 md:p-8 space-y-6">
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold text-foreground">

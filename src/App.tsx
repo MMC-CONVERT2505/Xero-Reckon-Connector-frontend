@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route ,useParams} from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet, useParams } from "react-router-dom";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -17,6 +17,7 @@ import { useEffect } from "react";
 
 
 import ReckonFileSelection from "./components/ReckonFileSelection";
+import JourneyNavBar from "./components/JourneyNavBar";
 
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminMigrationDetails from "./pages/AdminMigrationDetails"
@@ -24,6 +25,14 @@ import AdminMigrationDetails from "./pages/AdminMigrationDetails"
 // ...existing imports...
 
 const queryClient = new QueryClient();
+
+// Pages of the Migration Hub journey get the Prepare/Pay/Connect/Migrate bar on top.
+const JourneyLayout = () => (
+  <div className="min-h-screen bg-background">
+    <JourneyNavBar />
+    <Outlet />
+  </div>
+);
 
 // Simple wrappers to satisfy required props when used as standalone pages
 const CustomerInfoPage = () => (
@@ -35,7 +44,7 @@ const CustomerInfoPage = () => (
 );
 
 const ConnectionStepPage = () => (
-  <div className="min-h-screen flex items-center justify-center p-4">
+  <div className="min-h-[calc(100vh-72px)] flex items-center justify-center p-4">
     <div className="max-w-3xl w-full">
       <ConnectionStep onComplete={() => { /* e.g. navigate to /migration-progress */ }} />
     </div>
@@ -52,7 +61,7 @@ const MigrationProcessPage = () => {
   }, [jobId]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
+    <div className="min-h-[calc(100vh-72px)] flex items-center justify-center p-4">
       <div className="max-w-4xl w-full">
         <MigrationProgress
           onComplete={() => {}}
@@ -82,10 +91,12 @@ const App = () => (
 
           {/* Individual screens as pages */}
           <Route path="/customer-info" element={<CustomerInfoPage/>} />
-          <Route path="/connect-accounts" element={<ConnectionStepPage/>} />
-          <Route path="/xero-file-selection/:jobId" element={<XeroFileSelection/>} />
-          <Route path="/Reckon-file-selection/:jobId" element={< ReckonFileSelection/>} />
-          <Route path="/migration-progress/:jobId" element={<MigrationProcessPage/>} />
+          <Route element={<JourneyLayout />}>
+            <Route path="/connect-accounts" element={<ConnectionStepPage/>} />
+            <Route path="/xero-file-selection/:jobId" element={<XeroFileSelection/>} />
+            <Route path="/Reckon-file-selection/:jobId" element={< ReckonFileSelection/>} />
+            <Route path="/migration-progress/:jobId" element={<MigrationProcessPage/>} />
+          </Route>
 
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/migrations/:jobId" element={<AdminMigrationDetails />} />
