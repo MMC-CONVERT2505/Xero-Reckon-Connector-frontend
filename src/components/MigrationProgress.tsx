@@ -650,22 +650,24 @@ const MigrationProgress = ({
 
       <div className="space-y-6 p-4 sm:p-6">
       {/* Page Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Migration Tracker</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Please keep this page open while your data is being transferred
-          </p>
-        </div>
-        <Button
-          onClick={() => setHelpDialogOpen(true)}
-          disabled={!jobId}
-          className="bg-amber-400 text-white hover:bg-amber-500"
-        >
-          <LifeBuoy />
-          Request Help
-        </Button>
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Migration Tracker</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Please keep this page open while your data is being transferred
+        </p>
       </div>
+
+      {/* Floating Request Help button (chat-style, bottom-right) */}
+      <Button
+        onClick={() => setHelpDialogOpen(true)}
+        disabled={!jobId}
+        aria-label="Request Help"
+        title="Request Help"
+        className="fixed bottom-6 right-6 z-50 h-14 w-14 rounded-full p-0 sm:w-auto sm:px-5 bg-amber-400 text-white shadow-lg hover:bg-amber-500 hover:shadow-xl transition-all [&_svg]:size-6"
+      >
+        <LifeBuoy />
+        <span className="hidden sm:inline">Request Help</span>
+      </Button>
 
       {/* Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
