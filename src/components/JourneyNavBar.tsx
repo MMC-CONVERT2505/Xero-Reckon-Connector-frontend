@@ -1,5 +1,5 @@
-import { ArrowLeft } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowDownUp } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 // Migration Hub journey: "Prepare" and "Pay" happen on Migration Hub before
@@ -15,37 +15,59 @@ export const journeySteps = [
 export const getJourneyStep = (pathname: string): number =>
   pathname.toLowerCase().startsWith("/migration-progress") ? 4 : 3;
 
+// Header links point at the Migration Hub marketing site.
+const MIGRATION_HUB_URL = import.meta.env.VITE_MIGRATION_HUB_URL ?? "";
+
+const hubLinks = [
+  { label: "How it Works", href: "#how-it-works" },
+  { label: "Features", href: "#features" },
+  { label: "Security", href: "#security" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "Resources", href: "#resources" },
+];
+
 interface JourneyNavBarProps {
   currentStep?: number;
-  onBack?: () => void;
 }
 
-const JourneyNavBar = ({ currentStep, onBack }: JourneyNavBarProps) => {
+const JourneyNavBar = ({ currentStep }: JourneyNavBarProps) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const activeStep = currentStep ?? getJourneyStep(location.pathname);
 
-  const handleBack = () => {
-    if (onBack) return onBack();
-    if (window.history.length > 1) navigate(-1);
-    else navigate("/");
-  };
-
   return (
-    <header className="sticky top-0 z-40 w-full bg-white shadow-sm">
-      <div className="mx-auto flex h-[72px] max-w-5xl items-center gap-4 px-4 md:gap-8">
-        <button
-          type="button"
-          onClick={handleBack}
-          className="flex shrink-0 items-center gap-2 rounded-full bg-amber-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-2"
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </button>
+    <header className="sticky top-0 z-40 w-full">
+      {/* Brand bar */}
+      <div className="bg-slate-100">
+        <div className="mx-auto flex h-[60px] items-center justify-between gap-4 px-4 sm:px-5">
+          <a href={MIGRATION_HUB_URL || "/"} className="flex shrink-0 items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-violet-600 text-white">
+              <ArrowDownUp className="h-4 w-4" strokeWidth={2.5} />
+            </span>
+            <span className="flex flex-col leading-tight">
+              <span className="text-[15px] font-semibold text-violet-700">Migration Hub</span>
+              <span className="text-[10px] text-slate-700">Powered by MMC Convert</span>
+            </span>
+          </a>
 
+          <nav aria-label="Migration Hub" className="hidden items-center gap-6 md:flex">
+            {hubLinks.map((link) => (
+              <a
+                key={link.label}
+                href={`${MIGRATION_HUB_URL}/${link.href}`}
+                className="rounded-full bg-slate-50 px-3 py-1 text-[13px] text-slate-600 transition-colors hover:bg-white hover:text-violet-700"
+              >
+                {link.label}
+              </a>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Journey stepper */}
+      <div className="bg-white">
         <nav
           aria-label="Migration progress"
-          className="flex flex-1 items-center justify-between border-b-2 border-violet-600 pb-1"
+          className="mx-auto flex max-w-[660px] items-start border-b-2 border-violet-600 px-2 pt-1.5 pb-0.5"
         >
           {journeySteps.map((step) => {
             const isCurrent = step.id === activeStep;
@@ -53,10 +75,11 @@ const JourneyNavBar = ({ currentStep, onBack }: JourneyNavBarProps) => {
 
             return (
               <div key={step.id} className="relative flex flex-1 flex-col items-center">
-                {isCurrent && (
+                {isCurrent && step.id > 1 && (
+                  // Arrow sits midway between the previous step and the current one.
                   <span
                     aria-hidden
-                    className="absolute -left-1 top-1 h-0 w-0 border-y-[6px] border-l-[9px] border-y-transparent border-l-amber-500 sm:left-0"
+                    className="absolute left-0 top-[6px] h-0 w-0 -translate-x-1/2 border-y-[6px] border-l-[10px] border-y-transparent border-l-amber-500"
                   />
                 )}
                 <span
