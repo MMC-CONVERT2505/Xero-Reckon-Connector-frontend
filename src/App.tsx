@@ -61,8 +61,8 @@ const MigrationProcessPage = () => {
   }, [jobId]);
 
   return (
-    <div className="min-h-[calc(100vh-72px)] flex items-center justify-center p-4">
-      <div className="max-w-4xl w-full">
+    <div className="min-h-[calc(100vh-72px)] bg-slate-50">
+      <div className="mx-auto w-full max-w-[1800px]">
         <MigrationProgress
           onComplete={() => {}}
           fileId={Number(jobId) || undefined}
