@@ -108,6 +108,51 @@ class ApiClient {
 // Create API client instance
 const apiClient = new ApiClient(API_BASE_URL);
 
+// Fiscal years the backend builds a comparative trial balance for
+// (YEAR_COLLECTIONS in utils/comparative_report.py).
+export const COMPARATIVE_REPORT_YEARS = [1, 2] as const;
+
+export interface ComparativeReportFile {
+  year: number;
+  fileName: string;
+  blob: Blob;
+}
+
+/**
+ * Generates one year's comparative trial balance PDF on the backend (built
+ * from live Xero/Reckon balances at request time) and returns it as a Blob.
+ * A 404 means that year has no matched trial balance data.
+ */
+const fetchComparativeReport = async (
+  jobId: number,
+  year: number
+): Promise<ApiResponse<ComparativeReportFile>> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/comparative_report/${jobId}?year=${year}`);
+
+    if (!response.ok) {
+      let message = `Report for year ${year} could not be generated`;
+      if (response.headers.get("content-type")?.includes("application/json")) {
+        const body = await response.json().catch(() => null);
+        message = body?.message || body?.error || message;
+      }
+      return { error: { message, status: response.status } };
+    }
+
+    return {
+      data: {
+        year,
+        fileName: `Comparative_Trial_Balance_${jobId}_Year${year}.pdf`,
+        blob: await response.blob(),
+      },
+    };
+  } catch (error) {
+    return {
+      error: { message: error instanceof Error ? error.message : "Network error occurred" },
+    };
+  }
+};
+
 // API Endpoints
 export interface CustomerInfo {
   companyName: string;
@@ -265,6 +310,8 @@ export interface ConnectionStatus {
 
 // API Functions
 export const api = {
+  fetchComparativeReport,
+
   // Which Xero/Reckon files are already selected for a job — lets the Connect
   // Accounts page restore its state after the user reconnects a file.
   getConnectionStatus: async (jobId: number): Promise<ApiResponse<ConnectionStatus>> => {

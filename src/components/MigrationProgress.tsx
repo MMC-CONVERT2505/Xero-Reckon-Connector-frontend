@@ -25,7 +25,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { api, MigrationPhase, MigrationRecordData, MigrationStatus } from "@/lib/api";
+import { api, COMPARATIVE_REPORT_YEARS, MigrationPhase, MigrationRecordData, MigrationStatus } from "@/lib/api";
 import RequestHelpDialog from "./RequestHelpDialog";
 
 interface MigrationRecord {
@@ -310,6 +310,7 @@ const MigrationProgress = ({
   const [tableRecordsLoading, setTableRecordsLoading] = useState(false);
   const [helpDialogOpen, setHelpDialogOpen] = useState(false);
   const [phaseInfo, setPhaseInfo] = useState<PhaseInfo | null>(null);
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
   // Customer Info step normally writes these to localStorage keyed by job id, but a
   // job can also be reached by reusing an existing Job ID (e.g. jumping straight to
@@ -552,25 +553,54 @@ const MigrationProgress = ({
     setTableRecordsLoading(false);
   };
 
-  const handleDownloadReport = () => {
-    const header = ["Sequence", "Type", `Extracted from ${SOURCE_NAME}`, `Pushed to ${TARGET_NAME}`, "Failed", "Status"];
-    const rows = records.map((record, index) => [
-      String(index + 1).padStart(2, "0"),
-      record.name,
-      record.count,
-      record.migrated,
-      record.errors,
-      statusStyles[getEffectiveStatus(record)].label,
-    ]);
-    const escape = (cell: string | number) => `"${String(cell).replace(/"/g, '""')}"`;
-    const csv = [header, ...rows].map((row) => row.map(escape).join(",")).join("\n");
+  // Asks the backend to build every year's comparative trial balance PDF from
+  // the live Xero/Reckon balances, then saves each one to the user's machine.
+  const handleDownloadReport = async () => {
+    if (!jobId) return;
+    setIsGeneratingReport(true);
 
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `comparative-report-${jobId ?? "migration"}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+      const results = await Promise.all(
+        COMPARATIVE_REPORT_YEARS.map((year) => api.fetchComparativeReport(jobId, year))
+      );
+      const files = results.flatMap((res) => (res.data ? [res.data] : []));
+
+      if (files.length === 0) {
+        // 404 for every year = no matched trial balance yet; surface any other error first.
+        const realError = results.find((res) => res.error && res.error.status !== 404)?.error;
+        throw new Error(
+          realError?.message ||
+            "The comparative report isn't ready yet. It becomes available once the migration finishes."
+        );
+      }
+
+      files.forEach((file, index) => {
+        const url = URL.createObjectURL(file.blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = file.fileName;
+        document.body.appendChild(link);
+        // Stagger clicks so browsers don't drop the second download.
+        setTimeout(() => {
+          link.click();
+          link.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }, index * 400);
+      });
+
+      toast({
+        title: files.length > 1 ? "Reports downloaded" : "Report downloaded",
+        description: files.map((file) => file.fileName).join(", "),
+      });
+    } catch (err) {
+      toast({
+        title: "Couldn't generate report",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingReport(false);
+    }
   };
 
   // Once the job is done, show 100% even if some records failed.
@@ -631,10 +661,11 @@ const MigrationProgress = ({
               <div className="mt-4 flex flex-wrap gap-2">
                 <Button
                   onClick={handleDownloadReport}
-                  disabled={records.length === 0}
+                  disabled={!jobId || isGeneratingReport}
                   className="bg-[#1f6aa5] font-semibold text-white hover:bg-[#1a5a8c]"
                 >
-                  Get Comparative Report
+                  {isGeneratingReport && <Loader2 className="h-4 w-4 animate-spin" />}
+                  {isGeneratingReport ? "Generating Report…" : "Get Comparative Report"}
                 </Button>
                 <Button
                   variant="outline"
